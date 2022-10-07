@@ -15,7 +15,7 @@ macro bind(def, element)
 end
 
 # ╔═╡ 5dcb2929-115e-459c-b98d-43ae7bcabd3a
-using Pkg; Pkg.activate("/Users/hernando/work/investigacion/NEXT/software/julias/jclouds")
+using Pkg; Pkg.activate("/Users/hernando/work/investigacion/NEXT/software/julias/Clouds")
 
 # ╔═╡ a9d9186f-19aa-41d7-8ec6-ad5197a74b8b
 begin
@@ -37,7 +37,7 @@ import GraphPlot as GP
 end
 
 # ╔═╡ a57cdb41-c388-4976-bec8-ec0650fb139c
-import jclouds as jc
+import Clouds as jc
 
 # ╔═╡ cdc50171-b288-40b6-9d0d-9511901218e0
 md"""
@@ -73,9 +73,9 @@ Produces a smeared curve in 2D or ·D
 # ╔═╡ e8848fd9-205e-4b56-b192-62f1acda8d7e
 begin
 bndim = @bind nndim Select([2, 3])
-	
+
 #blabel = @bind typeevt Select(coll(:contents, :grad, :lap, :curmin, :curmax, :nodes, :nbordes))
-	
+
 md"""
 
 Select dimensions of the line $(bndim)
@@ -96,7 +96,7 @@ end
 # ╔═╡ 5a1832c1-33ff-45dc-8f47-212179dbe862
 md"""
 
-## Clouds 
+## Clouds
 """
 
 # ╔═╡ 13ac9fdf-46d0-4940-80e3-8619f0609108
@@ -109,9 +109,9 @@ md"""
 begin
 
 blabel = @bind label Select([:contents, :grad, :lap, :curmax, :curmin, :nodes, :nborders])
-	
+
 #blabel = @bind typeevt Select(coll(:contents, :grad, :lap, :curmin, :curmax, :nodes, :nbordes))
-	
+
 md"""
 
 Select label to plot $(blabel)
@@ -145,13 +145,13 @@ function line(;ndim = 3, threshold = 0.)
 	az, bz, cz = 5., -5., 0.
 	xx = cx .* ts .* ts + ax .* ts .+ bx
 	yy = cy .* ts .* ts + ay .* ts .+ by
-	zz = cz .* ts .* ts + az .* ts .+ bz 
+	zz = cz .* ts .* ts + az .* ts .+ bz
 
 	zsig  = 5.
 	sigma = 2 * tstep #* ma(ax, ay, az)
 	xxbins = minimum(xx) - zsig .* sigma : sigma : maximum(xx) + zsig .*sigma
 	yybins = minimum(yy) - zsig .* sigma : sigma : maximum(yy) + zsig .*sigma
-	zzbins = minimum(zz) - zsig .* sigma : sigma : maximum(zz) + zsig .*sigma 
+	zzbins = minimum(zz) - zsig .* sigma : sigma : maximum(zz) + zsig .*sigma
 
 	heigth  = 1000
 	xxcontents = heigth * ones(Base.size(xx))
@@ -250,7 +250,7 @@ cplot(xcl, label, label, [v0, v1])
 begin
 
 function cloud_graph(nodes, nodes_edges)
-	
+
 	nnodes = length(unique(nodes))
 	g = GG.Graph(nnodes)
 	for inode in keys(nodes_edges)

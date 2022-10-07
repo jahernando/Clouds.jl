@@ -15,7 +15,7 @@ macro bind(def, element)
 end
 
 # ╔═╡ 5dcb2929-115e-459c-b98d-43ae7bcabd3a
-using Pkg; Pkg.activate("/Users/hernando/work/investigacion/NEXT/software/julias/jclouds")
+using Pkg; Pkg.activate("/Users/hernando/work/investigacion/NEXT/software/julias/Clouds")
 
 # ╔═╡ a9d9186f-19aa-41d7-8ec6-ad5197a74b8b
 begin
@@ -70,15 +70,15 @@ md"""
 
 # ╔═╡ e8848fd9-205e-4b56-b192-62f1acda8d7e
 begin
-	
+
 bndim = @bind ndim Select([2, 3])
 
-bb = @bind b Slider(2:10, default = 2) 
+bb = @bind b Slider(2:10, default = 2)
 bc = @bind c Slider(b:10, default = b)
 bd = @bind d Slider(c:10, default = c)
-	
+
 #blabel = @bind typeevt Select(coll(:contents, :grad, :lap, :curmin, :curmax, :nodes, :nbordes))
-	
+
 md"""
 
 Select dimensions of the line $(bndim)
@@ -92,14 +92,14 @@ end
 
 # ╔═╡ 5f0109a3-0e2d-4528-af51-652790a3c23e
 md"""
-c = $(bc) 
+c = $(bc)
 
 """
 
 # ╔═╡ 836c7884-5a2c-49a1-aab0-8a124219e39e
 if ndim == 3
 	md"""
-	d = $(bd) 
+	d = $(bd)
 	"""
 end
 
@@ -122,14 +122,14 @@ begin
 function box2d(vals = [1, 2, 4])
 
 	@assert length(vals) ==3
-	
+
 	a, b, c = vals[1], vals[2], vals[3]
 	@assert (a < b) & (b < c)
-	
+
 	cs = [a b a; b c b; a b a]
-	
+
 	mat = cs
-	
+
 	ba = b-a
 	cb = c-b
 	ca = (c-a)/sqrt(2.)
@@ -137,8 +137,8 @@ function box2d(vals = [1, 2, 4])
 	c1, c2, c3 = max(ba, ca), cb, 0.
 	grad = [c1 c2 c1; c2 c3 c2; c1 c2 c1]
 
-	c1 = 2*ba + ca 
-	c2 = -2*ba + cb  
+	c1 = 2*ba + ca
+	c2 = -2*ba + cb
 	c3 = -4*cb - 4*ca
 	lap = [c1 c2 c1; c2 c3 c2; c1 c2 c1]
 
@@ -148,13 +148,13 @@ function box2d(vals = [1, 2, 4])
 	# notice that a diagonal step from a corner out of the cloud can have curvature 0.
 	c1, c2, c3 = min(ba, ca, 0.0), -2*ba, min(-2*cb, -2*ca)
 	minc = [c1  c2 c1; c2 c3 c2; c1 c2 c1]
-	
+
 	return (contents = mat, grad = grad, lap = lap, curmax = maxc, curmin = minc)
-	
+
 end
 
-	
-	
+
+
 end #begin
 
 # ╔═╡ 34820285-e673-4f45-9593-fc5cb409d3d1
@@ -164,7 +164,7 @@ begin
 function box3d(vals = [1, 2, 3, 4])
 
 	@assert (length(vals) == 4)
-	
+
 	a, b, c, d = vals[1], vals[2], vals[3], vals[4]
 	@assert (a < b) & (b < c) & (c < d)
 
@@ -172,7 +172,7 @@ function box3d(vals = [1, 2, 3, 4])
 	bs[:, :, 1] = [a b a; b c b; a b a]
 	bs[:, :, 2] = [b c b; c d c; b c b]
 	bs[:, :, 3] = [a b a; b c b; a b a]
-	
+
 	ba = b-a
 	ca = c-a
 	da = d-a
@@ -189,7 +189,7 @@ function box3d(vals = [1, 2, 3, 4])
 		m[:, :, 3] = [c1 c2 c1; c2 c3 c2; c1 c2 c1]
 		return m
 	end
-		
+
 	c1, c2, c3, c4 = max(ba, ca/d2, da/d3), max(cb, db/d2), dc, 0.
 	grad = _mat(c1, c2, c3, c4)
 
@@ -210,13 +210,13 @@ function box3d(vals = [1, 2, 3, 4])
 	c3     = min(-2cb, -2ca/d2, -dc)
 	c4     = min(-2dc, -2db/d2, -2da/d3)
 	curmin = _mat(c1, c2, c3, c4)
-	
+
 	return (contents = bs, grad = grad, lap = lap,
 		    curmax = curmax, curmin = curmin)
-	
-	
+
+
 end
-	
+
 end
 
 # ╔═╡ 6a0e9248-957b-4d06-90a3-66cf4c6b54fe
@@ -239,7 +239,7 @@ begin
 function test_clouds(bs, threshold = 0.0)
 
 	# set the input for clouds
-	ndim   = length(size(bs)) 
+	ndim   = length(size(bs))
 	indices = CartesianIndices(bs)
 	coors = [vec([index[i] for index in indices]) for i in 1:ndim]
 	steps = ones(ndim)
@@ -248,7 +248,7 @@ function test_clouds(bs, threshold = 0.0)
 	tcl = jc.clouds(coors, vec(bs), steps)
 
 	# prepare the local matrix to compute gradients, laplacian and curvatures
-	nsize  = size(bs) .+ 2	
+	nsize  = size(bs) .+ 2
 	aa    = zeros(Float64, nsize...)
 	for index in indices
 		kindex = CartesianIndex(Tuple(index) .+ 1)
@@ -282,7 +282,7 @@ function test_clouds(bs, threshold = 0.0)
 	ugrad = zeros(Float64, nsize...)
 	igrad = mm.i0 .* ones(Int, nsize...)
 	for (i, delta) in enumerate(deltas)
-		imask = delta .> ugrad 
+		imask = delta .> ugrad
 		ugrad[imask] = delta[imask]
 		igrad[imask] .= i
 	end
@@ -306,7 +306,7 @@ function test_clouds(bs, threshold = 0.0)
 	icurmin = mm.i0 .* ones(Int, nsize...)
 	for (i, curve) in enumerate(curves)
 		imove = mm.isym[i][1]
-		imask = curve .> curmax 
+		imask = curve .> curmax
 		curmax[imask] .= curve[imask]
 		icurmax[imask] .= imove
 		imask = curve .< curmin
@@ -315,21 +315,21 @@ function test_clouds(bs, threshold = 0.0)
 	end
 	icurmin[nmask] .= mm.i0
 	icurmax[nmask] .= mm.i0
-	
+
 	@assert sum(isapprox.(curmin[mask], tcl.curmin)) == sum(mask)
 	@assert sum(isapprox.(curmax[mask], tcl.curmax)) == sum(mask)
 	@assert sum(icurmin[mask] .== tcl.icurmin) == sum(mask)
 	@assert sum(icurmax[mask] .== tcl.icurmax) == sum(mask)
 	print("OK curvmax/min icurvmax/min \n")
-	
+
 
 	#return icurmin[mask], tcl.icurmin
 
 	return tcl
 	#return curmax, curmin, icurmax, icurmin
-	
+
 end
-	
+
 end
 
 # ╔═╡ 56cb0ef8-e95c-4eba-afd9-a53474a31b71
@@ -341,7 +341,7 @@ end;
 begin
 
 function test(xcl, mat)
-	
+
 	@assert sum(isapprox.(xcl.contents, vec(mat.contents))) == 3^ndim
 	@assert sum(isapprox.(xcl.grad, vec(mat.grad)))         == 3^ndim
 	@assert sum(isapprox.(xcl.lap, vec(mat.lap)))           == 3^ndim
