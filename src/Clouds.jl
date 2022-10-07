@@ -1,5 +1,7 @@
 module Clouds
 
-# Write your package code here.
+# import and export the relevant functions and strucs
+import("core.jl")
+export moves, clouds
 
 end
