@@ -4,4 +4,7 @@ module Clouds
 include("core.jl")
 export moves, clouds
 
+include("sources.jl")
+export box2d, box3d, line
+
 end
