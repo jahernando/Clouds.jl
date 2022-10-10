@@ -36,6 +36,9 @@ import Graphs  as GG
 import GraphPlot as GP
 end
 
+# ╔═╡ 3e468dd7-8d48-48d7-b2a9-3d2c16cf0c71
+using LinearAlgebra
+
 # ╔═╡ a57cdb41-c388-4976-bec8-ec0650fb139c
 import Clouds as jc
 
@@ -260,10 +263,78 @@ md"""
 """
 end
 
+# ╔═╡ 6e3c7351-2f85-4931-a3c5-9f116cec246c
+md"""
+# Extra Tests
+"""
+
+# ╔═╡ fc3b9200-69c5-4f3f-8b18-22dc82c8242e
+
+
+# ╔═╡ 96f4200e-a4d6-4ee6-93f9-fc486bed55ef
+begin
+movs = jc.moves(2)
+m2s = [[i, j] for i in -1:1:1 for j in -1:1:1]
+m3s = [[i, j, k] for i in -1:1:1 for j in -1:1:1 for k in -1:1:1]
+xdim = length(movs.moves[1])
+ms  = xdim == 2 ? m2s : m3s
+@assert length(movs.moves) == 3^xdim
+@assert findall(x -> all( x .== zeros(ndim)), movs.moves)[1] == movs.i0
+@assert sum([all(v1 .== v2) for (v1, v2) in zip(movs.moves, ms)]) == length(ms)
+@assert sum([movs.moves[i] == -movs.moves[j] for (i, j) in movs.isym]) == length(movs.isym)
+
+@assert sum([all([dot(movs.moves[isym[1]], movs.moves[k]) == 0 for k in movs.iortho[isym]]) for isym in movs.isym]) == length(movs.isym)
+
+	
+
+	
+#findall(x->all(x.==zeros(ndim)), movs)[0] == movs.i0
+	
+#all( x -> all(x .== zeros(2)), xs)
+end
+
+# ╔═╡ aa73d02e-7386-4289-8f1a-0835f2a348ad
+dot(movs.moves[i1], movs.moves[2])
+
+# ╔═╡ 2ff5a28d-2204-418f-ba91-c54cce3b0595
+[1, 2] == -1 * [-1, -2]
+
+# ╔═╡ 6aaefde1-c464-49e1-a1f0-b00a6ead7006
+movs.moves[1] * movs.moves[2]
+
+# ╔═╡ 21d565ca-1969-48d3-a0f2-88609addbd13
+
+
+# ╔═╡ 37f8169e-3e52-4a95-88a4-969d4e4fff34
+length(movs)
+
+# ╔═╡ 85765c8d-8312-4cb5-9f8b-fa92a0f3774c
+
+
+# ╔═╡ 77b6886f-d1a9-4280-888c-031bb6ddff34
+begin
+isok = findall(x -> all(x .== [0, 0]), xs)
+end
+
+# ╔═╡ da11d21d-799b-4309-ba0c-a6eb75c165ad
+ids = findall(x->all(x .== zeros(2)) , xs.moves)
+
+# ╔═╡ abde04c9-e93e-48e7-a3b0-d4f75c56fa75
+dot(movs.moves[1], movs.moves[2])
+
+# ╔═╡ 6bd3b36c-6ddd-4152-81bf-df7434b11f97
+movs.moves[1], movs.moves[2]
+
+# ╔═╡ b39204ac-bfc0-4fa0-8872-aac2d5feff6a
+[dot(v, v) for v in movs.moves]
+
+# ╔═╡ e66d5b79-77af-4504-9006-942ffabe17d1
+length(movs.moves)
+
 # ╔═╡ Cell order:
-# ╠═5dcb2929-115e-459c-b98d-43ae7bcabd3a
-# ╟─a9d9186f-19aa-41d7-8ec6-ad5197a74b8b
-# ╟─a57cdb41-c388-4976-bec8-ec0650fb139c
+# ╟─5dcb2929-115e-459c-b98d-43ae7bcabd3a
+# ╠═a9d9186f-19aa-41d7-8ec6-ad5197a74b8b
+# ╠═a57cdb41-c388-4976-bec8-ec0650fb139c
 # ╟─cdc50171-b288-40b6-9d0d-9511901218e0
 # ╟─3922eba2-f322-4b06-b9e0-83bc723d7930
 # ╟─3aedeb39-f255-4fd5-9ac3-29888a129e90
@@ -278,3 +349,19 @@ end
 # ╠═2e39663f-be86-40e7-ab62-7fca98a4489f
 # ╟─233ce695-1cc2-41ab-b798-4326fba77966
 # ╟─40f1d9a6-3f07-464d-8a97-bf627f6028e2
+# ╠═6e3c7351-2f85-4931-a3c5-9f116cec246c
+# ╠═fc3b9200-69c5-4f3f-8b18-22dc82c8242e
+# ╠═96f4200e-a4d6-4ee6-93f9-fc486bed55ef
+# ╠═aa73d02e-7386-4289-8f1a-0835f2a348ad
+# ╠═2ff5a28d-2204-418f-ba91-c54cce3b0595
+# ╠═6aaefde1-c464-49e1-a1f0-b00a6ead7006
+# ╠═21d565ca-1969-48d3-a0f2-88609addbd13
+# ╠═37f8169e-3e52-4a95-88a4-969d4e4fff34
+# ╠═85765c8d-8312-4cb5-9f8b-fa92a0f3774c
+# ╠═77b6886f-d1a9-4280-888c-031bb6ddff34
+# ╠═da11d21d-799b-4309-ba0c-a6eb75c165ad
+# ╠═abde04c9-e93e-48e7-a3b0-d4f75c56fa75
+# ╠═6bd3b36c-6ddd-4152-81bf-df7434b11f97
+# ╠═b39204ac-bfc0-4fa0-8872-aac2d5feff6a
+# ╠═e66d5b79-77af-4504-9006-942ffabe17d1
+# ╠═3e468dd7-8d48-48d7-b2a9-3d2c16cf0c71

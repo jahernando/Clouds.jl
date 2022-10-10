@@ -1,3 +1,4 @@
+using LinearAlgebra
 using Clouds
 using Test
 
@@ -89,9 +90,36 @@ function simple_clouds(bs; threshold = 0.0)
 
 end
 
-#----- Test
+#----- moves
+
+#--------------------------
+# Test
+#---------------------------
 
 @testset "Clouds.jl" begin
+
+    @testset "moves2d" begin
+        movs = moves(2)
+        ms = [[i, j] for i in -1:1:1 for j in -1:1:1]
+        xdim = length(movs.moves[1])
+        @test length(movs.moves) == 3^xdim
+        @test findall(x -> all( x .== zeros(xdim)), movs.moves)[1] == movs.i0
+        @test sum([all(v1 .== v2) for (v1, v2) in zip(movs.moves, ms)]) == length(ms)
+        @test sum([movs.moves[i] == -movs.moves[j] for (i, j) in movs.isym]) == length(movs.isym)
+        @test sum([all([dot(movs.moves[isym[1]], movs.moves[k]) == 0 for k in movs.iortho[isym]]) for isym in movs.isym]) == length(movs.isym)
+    end
+
+    @testset "moves3d" begin
+        movs = moves(3)
+        ms = [[i, j, k] for i in -1:1:1 for j in -1:1:1 for k in -1:1:1]
+        xdim = length(movs.moves[1])
+        @test length(movs.moves) == 3^xdim
+        @test findall(x -> all( x .== zeros(xdim)), movs.moves)[1] == movs.i0
+        @test sum([all(v1 .== v2) for (v1, v2) in zip(movs.moves, ms)]) == length(ms)
+        @test sum([movs.moves[i] == -movs.moves[j] for (i, j) in movs.isym]) == length(movs.isym)
+        @test sum([all([dot(movs.moves[isym[1]], movs.moves[k]) == 0 for k in movs.iortho[isym]]) for isym in movs.isym]) == length(movs.isym)
+    end
+
 
     @testset "box2d" begin
         mat  = box2d()
