@@ -1,7 +1,139 @@
 using Clouds
 using Test
 
+
+function box_to_coors(aa)
+    ndim = length(size(aa))
+    steps = ones(ndim)
+    cells = CartesianIndices(aa)
+    coors = [vec([c[i] for c in cells]) for i in 1:ndim]
+    return coors, vec(aa), steps
+end
+
+
+function simple_clouds(bs; threshold = 0.0)
+
+	# set the input for clouds
+	ndim    = length(size(bs))
+	indices = CartesianIndices(bs)
+	steps   = ones(ndim)
+
+	# prepare the local matrix to compute gradients, laplacian and curvatures
+	nsize  = size(bs) .+ 2
+	aa    = zeros(Float64, nsize...)
+	for index in indices
+		kindex = CartesianIndex(Tuple(index) .+ 1)
+		aa[kindex] = bs[index]
+	end
+
+	# the mask
+	mask = aa  .>  threshold
+	nmask = aa .<= threshold
+	# set the moves
+	mm = moves(ndim)
+
+	# compute the deltas
+	function _delta(move)
+		delta = zeros(Float64, nsize...)
+		mod   = sqrt(sum(move .* move))
+		mod   = mod == 0.0 ? 1 : mod
+		for index in indices
+			uindex = CartesianIndex(Tuple(index)  .+ 1)
+			kindex = CartesianIndex(Tuple(Tuple(uindex) .+ move))
+			dd = aa[kindex] > 0.0 ? (aa[kindex] - aa[uindex])/mod : 0.
+			delta[uindex] = dd
+		end
+		return delta
+	end
+
+	# compute deltas
+	deltas = [_delta(move) for move in mm.moves]
+
+	# compute gradient
+	ugrad = zeros(Float64, nsize...)
+	igrad = mm.i0 .* ones(Int, nsize...)
+	for (i, delta) in enumerate(deltas)
+		imask = delta .> ugrad
+		ugrad[imask] = delta[imask]
+		igrad[imask] .= i
+	end
+
+
+	# compute and test laplacian
+	lap = reduce(.+, deltas)
+
+	# compute and test curves and max, min curve
+	curves = [reduce(.+, [deltas[i] for i in s]) for s in mm.isym]
+	#curves = [reduce(.+, [deltas[i] for i in mm.iortho[s]]) for s in mm.isym]
+	curmax = -1e6*ones(nsize...)
+	curmin = +1e6*ones(nsize...)
+	icurmax = mm.i0 .* ones(Int, nsize...)
+	icurmin = mm.i0 .* ones(Int, nsize...)
+	for (i, curve) in enumerate(curves)
+		imove = mm.isym[i][1]
+		imask = curve .> curmax
+		curmax[imask] .= curve[imask]
+		icurmax[imask] .= imove
+		imask = curve .< curmin
+		curmin[imask] .= curve[imask]
+		icurmin[imask] .= imove
+	end
+	icurmin[nmask] .= mm.i0
+	icurmax[nmask] .= mm.i0
+
+    data = (contents = aa[mask],
+            grad = ugrad[mask], igrad = igrad[mask], lap = lap[mask],
+            curmax = curmax[mask], icurmax = icurmax[mask],
+            curmin = curmin[mask], icurmin = icurmin[mask])
+    return data
+
+end
+
+#----- Test
+
 @testset "Clouds.jl" begin
-    @test sum(vec(box2d())) == 16
+
+    @testset "box2d" begin
+        mat  = box2d()
+        coors, contents, steps = box_to_coors(mat.contents)
+        ndim = 2
+        xcl  = clouds(coors, contents, steps)
+        @test sum(contents) == sum(mat.contents)
+        @test sum(isapprox.(xcl.contents, vec(mat.contents))) == 3^ndim
+        @test sum(isapprox.(xcl.grad    , vec(mat.grad)))     == 3^ndim
+        @test sum(isapprox.(xcl.lap     , vec(mat.lap)))      == 3^ndim
+        @test sum(isapprox.(xcl.curmax  , vec(mat.curmax)))   == 3^ndim
+        @test sum(isapprox.(xcl.curmin  , vec(mat.curmin)))   == 3^ndim
+    end
+
+    @testset "box3d" begin
+        mat  = box3d()
+        coors, contents, steps = box_to_coors(mat.contents)
+        ndim = 3
+        xcl  = clouds(coors, contents, steps)
+        @test sum(contents) == sum(mat.contents)
+        @test sum(isapprox.(xcl.contents, vec(mat.contents))) == 3^ndim
+        @test sum(isapprox.(xcl.grad    , vec(mat.grad)))     == 3^ndim
+        @test sum(isapprox.(xcl.lap     , vec(mat.lap)))      == 3^ndim
+        @test sum(isapprox.(xcl.curmax  , vec(mat.curmax)))   == 3^ndim
+        @test sum(isapprox.(xcl.curmin  , vec(mat.curmin)))   == 3^ndim
+    end
+
+    @testset "simple" begin
+        mat  = box3d()
+        ndim = 3
+        scl  = simple_clouds(mat.contents)
+        coors, contents, steps = box_to_coors(mat.contents)
+        xcl  = clouds(coors, contents, steps)
+        @test sum(isapprox.(xcl.contents, vec(scl.contents))) == 3^ndim
+        @test sum(isapprox.(xcl.grad    , vec(scl.grad)))     == 3^ndim
+        @test sum(isapprox.(xcl.lap     , vec(scl.lap)))      == 3^ndim
+        @test sum(isapprox.(xcl.curmax  , vec(scl.curmax)))   == 3^ndim
+        @test sum(isapprox.(xcl.curmin  , vec(scl.curmin)))   == 3^ndim
+        @test sum(scl.igrad   .== scl.igrad)                  == 3^ndim
+        @test sum(scl.icurmax .== scl.icurmax)                 == 3^ndim
+        @test sum(scl.icurmin .== scl.icurmin)                 == 3^ndim
+    end
+
     # Write your tests here.
 end

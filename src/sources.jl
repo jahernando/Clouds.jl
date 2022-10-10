@@ -41,7 +41,8 @@ function box2d(vals = [1, 2, 4])
 	c1, c2, c3 = min(ba, ca, 0.0), -2*ba, min(-2*cb, -2*ca)
 	minc = [c1  c2 c1; c2 c3 c2; c1 c2 c1]
 
-	return (contents = mat, grad = grad, lap = lap, curmax = maxc, curmin = minc)
+	return (contents = mat, grad = grad, lap = lap, curmax = maxc,
+    curmin = minc)
 
 end
 

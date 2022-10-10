@@ -83,6 +83,11 @@ Select dimensions of the line $(bndim)
 """
 end
 
+# ╔═╡ 6c8bf138-8fec-4c69-b4dd-4284faddeed0
+begin
+img = jc.line(ndim = nndim, threshold = 6.)
+end;
+
 # ╔═╡ 1a8e9aa9-a47d-40fd-84c6-cfa49f9b1cc4
 begin
 
@@ -98,6 +103,21 @@ md"""
 
 ## Clouds
 """
+
+# ╔═╡ f5dbdc6d-6676-4e0c-a70e-a5daafbbd9db
+begin
+steps = [edge[2]-edge[1] for edge in img.edges]
+xcl   = jc.clouds(img.coors, img.contents, steps)
+end;
+
+# ╔═╡ 4e43c8e3-89e2-44ca-a6ed-48a364d90486
+begin
+md"""
+
+steps of the voxels: $(steps[1])
+
+"""
+end
 
 # ╔═╡ 13ac9fdf-46d0-4940-80e3-8619f0609108
 md"""
@@ -118,6 +138,33 @@ Select label to plot $(blabel)
 
 """
 end
+
+# ╔═╡ 8dca9736-1140-495c-98a3-4cb5acc8ffc1
+begin
+vals = getfield(xcl, label)
+minv, maxv = minimum(vals), maximum(vals)
+end;
+
+# ╔═╡ f17d0274-4a61-423c-a76f-870dcef41a60
+begin
+brange0 = @bind v0 Slider(minv:maxv, default = minv)
+brange1 = @bind v1 Slider(minv:maxv, default = maxv)
+md"""
+
+Selec range for variable $(label):
+
+minimum $(brange0)
+maximum  $(brange1)
+
+"""
+end
+
+# ╔═╡ e7544908-23e0-4e3a-ad93-2af5e0dc11f1
+md"""
+
+Selected range : [ $(v0), $(v1) ]
+
+"""
 
 # ╔═╡ 7b7981ca-1540-48a1-88e1-4f27e7787b70
 md"""
@@ -177,53 +224,6 @@ function line(;ndim = 3, threshold = 0.)
 end
 
 end # begin
-
-# ╔═╡ 6c8bf138-8fec-4c69-b4dd-4284faddeed0
-begin
-img = line(ndim = nndim, threshold = 6.)
-end;
-
-# ╔═╡ f5dbdc6d-6676-4e0c-a70e-a5daafbbd9db
-begin
-steps = [edge[2]-edge[1] for edge in img.edges]
-xcl   = jc.clouds(img.coors, img.contents, steps)
-end;
-
-# ╔═╡ 4e43c8e3-89e2-44ca-a6ed-48a364d90486
-begin
-md"""
-
-steps of the voxels: $(steps[1])
-
-"""
-end
-
-# ╔═╡ 8dca9736-1140-495c-98a3-4cb5acc8ffc1
-begin
-vals = getfield(xcl, label)
-minv, maxv = minimum(vals), maximum(vals)
-end;
-
-# ╔═╡ f17d0274-4a61-423c-a76f-870dcef41a60
-begin
-brange0 = @bind v0 Slider(minv:maxv, default = minv)
-brange1 = @bind v1 Slider(minv:maxv, default = maxv)
-md"""
-
-Selec range for variable $(label):
-
-minimum $(brange0)
-maximum  $(brange1)
-
-"""
-end
-
-# ╔═╡ e7544908-23e0-4e3a-ad93-2af5e0dc11f1
-md"""
-
-Selected range : [ $(v0), $(v1) ]
-
-"""
 
 # ╔═╡ dfa64554-5fb1-4d63-80d3-19aee7a476b8
 begin

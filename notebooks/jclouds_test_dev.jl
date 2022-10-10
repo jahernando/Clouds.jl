@@ -37,7 +37,7 @@ import GraphPlot as GP
 end
 
 # ╔═╡ a57cdb41-c388-4976-bec8-ec0650fb139c
-import jclouds as jc
+import Clouds as jc
 
 # ╔═╡ cdc50171-b288-40b6-9d0d-9511901218e0
 md"""
@@ -73,9 +73,10 @@ begin
 
 bndim = @bind ndim Select([2, 3])
 
-bb = @bind b Slider(2:10, default = 2)
-bc = @bind c Slider(b:10, default = b)
-bd = @bind d Slider(c:10, default = c)
+a  = 1
+bb = @bind b Slider(2:10, default = a+1)
+bc = @bind c Slider(b:10, default = a+2)
+bd = @bind d Slider(c:10, default = a+3)
 
 #blabel = @bind typeevt Select(coll(:contents, :grad, :lap, :curmin, :curmax, :nodes, :nbordes))
 
@@ -221,120 +222,20 @@ end
 
 # ╔═╡ 6a0e9248-957b-4d06-90a3-66cf4c6b54fe
 begin
-mat = ndim == 2 ? box2d([1, b, c]) : box3d([1, b, c, d])
+mat = ndim == 2 ? jc.box2d([1, b, c]) : jc.box3d([1, b, c, d])
 end;
 
 # ╔═╡ 2e39663f-be86-40e7-ab62-7fca98a4489f
-(mat.contents)
+mat.contents
 
-# ╔═╡ aec7f4d6-ec2d-4646-bdde-153d85005d45
-md"""
-
-## Test code
-
-"""
-
-# ╔═╡ 7e32f198-6473-4399-9dc4-af54ed451c33
+# ╔═╡ 233ce695-1cc2-41ab-b798-4326fba77966
 begin
-function test_clouds(bs, threshold = 0.0)
-
-	# set the input for clouds
-	ndim   = length(size(bs))
-	indices = CartesianIndices(bs)
-	coors = [vec([index[i] for index in indices]) for i in 1:ndim]
-	steps = ones(ndim)
-
-	# call clouds
-	tcl = jc.clouds(coors, vec(bs), steps)
-
-	# prepare the local matrix to compute gradients, laplacian and curvatures
-	nsize  = size(bs) .+ 2
-	aa    = zeros(Float64, nsize...)
-	for index in indices
-		kindex = CartesianIndex(Tuple(index) .+ 1)
-		aa[kindex] = bs[index]
-	end
-
-	# the mask
-	mask = aa  .>  threshold
-	nmask = aa .<= threshold
-	# set the moves
-	mm = jc.moves(ndim)
-
-	# compute the deltas
-	function _delta(move)
-		delta = zeros(Float64, nsize...)
-		mod   = sqrt(sum(move .* move))
-		mod   = mod == 0.0 ? 1 : mod
-		for index in indices
-			uindex = CartesianIndex(Tuple(index)  .+ 1)
-			kindex = CartesianIndex(Tuple(Tuple(uindex) .+ move))
-			dd = aa[kindex] > 0.0 ? (aa[kindex] - aa[uindex])/mod : 0.
-			delta[uindex] = dd
-		end
-		return delta
-	end
-
-	# compute deltas
-	deltas = [_delta(move) for move in mm.moves]
-
-	# compute gradient
-	ugrad = zeros(Float64, nsize...)
-	igrad = mm.i0 .* ones(Int, nsize...)
-	for (i, delta) in enumerate(deltas)
-		imask = delta .> ugrad
-		ugrad[imask] = delta[imask]
-		igrad[imask] .= i
-	end
-
-	# test the gradient
-	@assert sum(isapprox.(ugrad[mask], tcl.grad ))  == sum(mask)
-	@assert sum(igrad[mask] .== tcl.igrad)        == sum(mask)
-	print("Ok grad! \n")
-
-	# compute and test laplacian
-	lap = reduce(.+, deltas)
-	@assert sum(isapprox.(lap[mask], tcl.lap)) == sum(mask)
-	print("Ok laplacian! \n")
-
-	# compute and test curves and max, min curve
-	curves = [reduce(.+, [deltas[i] for i in s]) for s in mm.isym]
-	#curves = [reduce(.+, [deltas[i] for i in mm.iortho[s]]) for s in mm.isym]
-	curmax = -1e6*ones(nsize...)
-	curmin = +1e6*ones(nsize...)
-	icurmax = mm.i0 .* ones(Int, nsize...)
-	icurmin = mm.i0 .* ones(Int, nsize...)
-	for (i, curve) in enumerate(curves)
-		imove = mm.isym[i][1]
-		imask = curve .> curmax
-		curmax[imask] .= curve[imask]
-		icurmax[imask] .= imove
-		imask = curve .< curmin
-		curmin[imask] .= curve[imask]
-		icurmin[imask] .= imove
-	end
-	icurmin[nmask] .= mm.i0
-	icurmax[nmask] .= mm.i0
-
-	@assert sum(isapprox.(curmin[mask], tcl.curmin)) == sum(mask)
-	@assert sum(isapprox.(curmax[mask], tcl.curmax)) == sum(mask)
-	@assert sum(icurmin[mask] .== tcl.icurmin) == sum(mask)
-	@assert sum(icurmax[mask] .== tcl.icurmax) == sum(mask)
-	print("OK curvmax/min icurvmax/min \n")
-
-
-	#return icurmin[mask], tcl.icurmin
-
-	return tcl
-	#return curmax, curmin, icurmax, icurmin
-
-end
-
-end
-
-# ╔═╡ 56cb0ef8-e95c-4eba-afd9-a53474a31b71
-begin
-xcl = test_clouds(mat.contents)
+aa   = mat.contents
+xndim = length(size(aa))
+steps = ones(xndim)
+cells = CartesianIndices(aa)
+coors = [vec([c[i] for c in cells]) for i in 1:xndim]
+xcl = jc.clouds(coors, vec(aa), steps)
 end;
 
 # ╔═╡ 40f1d9a6-3f07-464d-8a97-bf627f6028e2
@@ -354,7 +255,7 @@ end
 ok = test(xcl, mat)
 md"""
 
-**Test** of gradient, laplacian, curvatures : **$(ok)**
+**Test** of gradient, laplacian, curvatures ? : **$(ok)**
 
 """
 end
@@ -368,14 +269,12 @@ end
 # ╟─3aedeb39-f255-4fd5-9ac3-29888a129e90
 # ╟─7408b8f3-31f8-4764-bbf1-2bf9b245a8bb
 # ╟─e8848fd9-205e-4b56-b192-62f1acda8d7e
-# ╠═5f0109a3-0e2d-4528-af51-652790a3c23e
+# ╟─5f0109a3-0e2d-4528-af51-652790a3c23e
 # ╟─836c7884-5a2c-49a1-aab0-8a124219e39e
 # ╟─c27a1991-24c6-4ead-9807-b2e2b37dfcdb
 # ╟─416cb989-f4f9-4acd-b9de-8b754a15f79e
 # ╟─34820285-e673-4f45-9593-fc5cb409d3d1
 # ╟─6a0e9248-957b-4d06-90a3-66cf4c6b54fe
 # ╠═2e39663f-be86-40e7-ab62-7fca98a4489f
-# ╟─56cb0ef8-e95c-4eba-afd9-a53474a31b71
+# ╟─233ce695-1cc2-41ab-b798-4326fba77966
 # ╟─40f1d9a6-3f07-464d-8a97-bf627f6028e2
-# ╟─aec7f4d6-ec2d-4646-bdde-153d85005d45
-# ╟─7e32f198-6473-4399-9dc4-af54ed451c33
