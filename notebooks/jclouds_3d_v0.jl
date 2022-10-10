@@ -21,7 +21,7 @@ using Pkg; Pkg.activate("/Users/hernando/work/investigacion/NEXT/software/julias
 begin
 using Markdown
 #using HDF5
-#using DataFrames
+import DataFrames as DF
 import StatsBase as SB
 using Plots
 import LinearAlgebra as LA
@@ -166,6 +166,15 @@ Selected range : [ $(v0), $(v1) ]
 
 """
 
+# ╔═╡ 2814ba8e-58fa-4b68-af7b-b9e6656dcc19
+md"""
+
+## Nodes
+"""
+
+# ╔═╡ 006588af-6212-40b6-a9b7-205f77404355
+DF.DataFrame(jc.nodes(xcl))
+
 # ╔═╡ 7b7981ca-1540-48a1-88e1-4f27e7787b70
 md"""
 ## Graph
@@ -270,7 +279,7 @@ end
 
 # ╔═╡ Cell order:
 # ╟─5dcb2929-115e-459c-b98d-43ae7bcabd3a
-# ╟─a9d9186f-19aa-41d7-8ec6-ad5197a74b8b
+# ╠═a9d9186f-19aa-41d7-8ec6-ad5197a74b8b
 # ╠═a57cdb41-c388-4976-bec8-ec0650fb139c
 # ╟─cdc50171-b288-40b6-9d0d-9511901218e0
 # ╟─3922eba2-f322-4b06-b9e0-83bc723d7930
@@ -289,6 +298,8 @@ end
 # ╟─f17d0274-4a61-423c-a76f-870dcef41a60
 # ╟─e7544908-23e0-4e3a-ad93-2af5e0dc11f1
 # ╠═1fab453f-5dab-48bb-87d2-1c92b3f6d7cc
+# ╠═2814ba8e-58fa-4b68-af7b-b9e6656dcc19
+# ╠═006588af-6212-40b6-a9b7-205f77404355
 # ╟─7b7981ca-1540-48a1-88e1-4f27e7787b70
 # ╟─1c402508-afd3-46a1-8dbc-a23fd9bd63e1
 # ╟─a779ac6e-5bac-46f1-b8ef-1e3d5b111f4d
