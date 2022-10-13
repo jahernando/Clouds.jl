@@ -32,9 +32,13 @@ using Base
 import Images.ImageFiltering as IF
 #using TestImages
 #using Distributions
-import Graphs  as GG
-import GraphPlot as GP
+import Graphs     as GG
+import MetaGraphs as MG
+import GraphPlot  as GP
 end
+
+# ╔═╡ 4b8cd472-c945-4731-91df-a830268878c7
+using Graphs
 
 # ╔═╡ a57cdb41-c388-4976-bec8-ec0650fb139c
 import Clouds as jc
@@ -107,7 +111,7 @@ md"""
 # ╔═╡ f5dbdc6d-6676-4e0c-a70e-a5daafbbd9db
 begin
 steps = [edge[2]-edge[1] for edge in img.edges]
-xcl   = jc.clouds(img.coors, img.contents, steps)
+xcl   = jc.clouds(img.coors, img.contents, steps; cellnode = false)
 end;
 
 # ╔═╡ 4e43c8e3-89e2-44ca-a6ed-48a364d90486
@@ -118,6 +122,9 @@ steps of the voxels: $(steps[1])
 
 """
 end
+
+# ╔═╡ ff6e3ab5-8806-4740-9d44-a861cf413687
+xcl
 
 # ╔═╡ 13ac9fdf-46d0-4940-80e3-8619f0609108
 md"""
@@ -173,12 +180,15 @@ md"""
 """
 
 # ╔═╡ 006588af-6212-40b6-a9b7-205f77404355
-DF.DataFrame(jc.nodes(xcl))
+xnd = jc.nodes(xcl)
 
 # ╔═╡ 7b7981ca-1540-48a1-88e1-4f27e7787b70
 md"""
 ## Graph
 """
+
+# ╔═╡ bf57c4b6-a03d-4e5f-91bc-db3f9dccfb78
+xnd.contents
 
 # ╔═╡ a779ac6e-5bac-46f1-b8ef-1e3d5b111f4d
 md"""
@@ -271,11 +281,117 @@ function cloud_graph(nodes, nodes_edges)
 end
 end # begin
 
+# ╔═╡ 98481aff-2884-4774-ba7e-f0df54c1c8ca
+GG.prim_mst(gg)
+
+# ╔═╡ 745cd0b8-3290-4c9b-b979-d755957eb38a
+
+
+# ╔═╡ 97fd042c-39f4-403e-a09c-6765bc94a1fb
+md"""
+## Dev area
+"""
+
+# ╔═╡ a53e8c97-9abf-496b-98f1-e9c9e2f3e687
+
+function create_graph(nodes_edges)
+
+	nnodes = length(keys(nodes_edges))
+	graphs = []
+	g = GG.Graph(nnodes)
+	for inode in keys(nodes_edges)
+		for knode in nodes_edges[inode]
+			GG.add_edge!(g, inode, knode)
+		end
+	end
+
+	ecc = GG.eccentricity(g)
+	_mst = GG.prim_mst(g)
+	mst = [mi.src for mi in _mst]
+	append!(mst, _mst[length(_mst)].dst)
+
+	return g, ecc, _mst
+
+end
+
+
+# ╔═╡ 610410c2-12bd-441c-8d9a-b016c7af1286
+begin
+gm = MG.MetaGraph()
+MG.add_vertex!(gm, :A, [7.2,8.6])
+MG.add_vertex!(gm, :B, [3.2,6.7])
+MG.add_vertex!(gm, :C, [6.3,3.9])
+MG.add_vertex!(gm, :D, [2.4,6.7])
+end
+
+# ╔═╡ e2256dd4-f3ff-49fc-8482-fea857d47495
+
+
+# ╔═╡ 07b471a0-ef38-46f7-80a6-f16663c54383
+eccentricity(gg)
+
+# ╔═╡ 3d887671-e6fc-408d-927d-827608887b11
+a = mst[1]
+
+# ╔═╡ 04a99c4e-922a-4db2-9557-2f30d2920417
+a.src
+
+# ╔═╡ 094fa039-84c6-4de6-8f84-3694e7a22eb8
+GG.vertices(graph)
+
+# ╔═╡ 8e93837c-c094-4807-b48c-af5e91e7e926
+# order nodes by energy
+begin
+function _sort_indices(contents, indices; rev = false)
+	vals = sort(collect(zip(contents, indices)); by = first, rev = rev)
+	ovals  = [v[1] for v in vals]
+	oindex = [v[2] for v in vals]
+	dindex = [findall(oindex .== ii)[1] for ii in indices]
+	return ovals, dindex
+end
+end
+
+# ╔═╡ 86c34f80-f373-4765-9fb2-3ee10ea91ad3
+begin
+zip([3, 5, 10], 1:3)
+end
+
+# ╔═╡ d8ba08fc-c49a-44b7-852e-50531b5a33bb
+_sort_indices([1, 5, 10], 1:3; rev =  true)
+
+# ╔═╡ c31a27dd-c7e2-4467-b7cc-7df4a1b9a004
+
+
+# ╔═╡ dc39ffb8-f1cf-4663-98f4-1cb51aeedfb6
+begin
+df = DF.DataFrame()
+for (i, coor) in enumerate(xcl.coors)
+	df[!, 'x'*string(i)] = coor
+end
+df[!, :grad]     = xcl.grad
+df[!, :igrad]    = xcl.igrad
+df[!, :lap]      = xcl.lap
+df[!, :curmax]   = xcl.curmax
+df[!, :icurmax]  = xcl.icurmax
+df[!, :nodes]    = xcl.node
+df[!, :nborders] = xcl.nborders
+end 
+
+# ╔═╡ f3004649-b11f-47ab-a126-414261706e71
+df
+
+# ╔═╡ 1767934c-1471-4481-a3fb-0b63dca9be23
+gg, ecc, mst = create_graph(xcl.nodes_edges)
+
 # ╔═╡ 1c402508-afd3-46a1-8dbc-a23fd9bd63e1
 begin
-gg = cloud_graph(xcl.nodes, xcl.nodes_edges)
-GP.gplot(gg, nodelabel=1:GG.nv(gg), edgelabel=1:GG.ne(gg))
+gg = cloud_graph(xcl.node, xcl.nodes_edges)
+#GP.gplot(gg, nodelabel=1:GG.nv(gg), edgelabel=1:GG.ne(gg), nodesize = xnd.contents)
+GP.gplot(gg, nodelabel=1:GG.nv(gg), nodesize = xnd.contents)
 end
+
+# ╔═╡ 14988916-d418-4c6d-b242-7637e9e96548
+mst = prim_mst(gg)
 
 # ╔═╡ Cell order:
 # ╟─5dcb2929-115e-459c-b98d-43ae7bcabd3a
@@ -292,17 +408,38 @@ end
 # ╟─5a1832c1-33ff-45dc-8f47-212179dbe862
 # ╠═f5dbdc6d-6676-4e0c-a70e-a5daafbbd9db
 # ╟─4e43c8e3-89e2-44ca-a6ed-48a364d90486
+# ╟─ff6e3ab5-8806-4740-9d44-a861cf413687
 # ╟─13ac9fdf-46d0-4940-80e3-8619f0609108
 # ╟─a689debb-8763-45c4-a03d-94c8e970b243
-# ╟─8dca9736-1140-495c-98a3-4cb5acc8ffc1
+# ╠═8dca9736-1140-495c-98a3-4cb5acc8ffc1
 # ╟─f17d0274-4a61-423c-a76f-870dcef41a60
 # ╟─e7544908-23e0-4e3a-ad93-2af5e0dc11f1
 # ╠═1fab453f-5dab-48bb-87d2-1c92b3f6d7cc
 # ╠═2814ba8e-58fa-4b68-af7b-b9e6656dcc19
 # ╠═006588af-6212-40b6-a9b7-205f77404355
 # ╟─7b7981ca-1540-48a1-88e1-4f27e7787b70
-# ╟─1c402508-afd3-46a1-8dbc-a23fd9bd63e1
+# ╠═1c402508-afd3-46a1-8dbc-a23fd9bd63e1
+# ╠═98481aff-2884-4774-ba7e-f0df54c1c8ca
+# ╠═bf57c4b6-a03d-4e5f-91bc-db3f9dccfb78
 # ╟─a779ac6e-5bac-46f1-b8ef-1e3d5b111f4d
 # ╠═d8a02e0a-db35-4965-8322-8741c3ffbd49
 # ╠═dfa64554-5fb1-4d63-80d3-19aee7a476b8
 # ╠═16b988b0-887f-4672-b347-9c374fcc3fae
+# ╠═745cd0b8-3290-4c9b-b979-d755957eb38a
+# ╠═97fd042c-39f4-403e-a09c-6765bc94a1fb
+# ╠═a53e8c97-9abf-496b-98f1-e9c9e2f3e687
+# ╠═1767934c-1471-4481-a3fb-0b63dca9be23
+# ╠═610410c2-12bd-441c-8d9a-b016c7af1286
+# ╠═4b8cd472-c945-4731-91df-a830268878c7
+# ╠═e2256dd4-f3ff-49fc-8482-fea857d47495
+# ╠═14988916-d418-4c6d-b242-7637e9e96548
+# ╠═07b471a0-ef38-46f7-80a6-f16663c54383
+# ╠═3d887671-e6fc-408d-927d-827608887b11
+# ╠═04a99c4e-922a-4db2-9557-2f30d2920417
+# ╠═094fa039-84c6-4de6-8f84-3694e7a22eb8
+# ╠═8e93837c-c094-4807-b48c-af5e91e7e926
+# ╠═86c34f80-f373-4765-9fb2-3ee10ea91ad3
+# ╠═d8ba08fc-c49a-44b7-852e-50531b5a33bb
+# ╠═c31a27dd-c7e2-4467-b7cc-7df4a1b9a004
+# ╠═dc39ffb8-f1cf-4663-98f4-1cb51aeedfb6
+# ╠═f3004649-b11f-47ab-a126-414261706e71

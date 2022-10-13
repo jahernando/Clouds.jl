@@ -1,7 +1,8 @@
 
 #using Base
-import StatsBase as SB
+import StatsBase     as SB
 import LinearAlgebra as LA
+import Graphs        as GG
 #import DataFrames as DF
 
 
@@ -38,32 +39,33 @@ function moves(ndim)
 	return (moves = moves, i0 = kmove0, isym = smoves, iortho = omoves)
 end
 
-#------------
-# Clouds
-#------------
 
-
-#------------
+#-----
 # Clouds
-#------------
+#-----
 
 """
 
 Create Clouds
 
-From a (x, y) or (x, y, z) tuples of points with an energy.
-The space is binned in steps and a histogram is created with the energy.
+From a (x, y) or (x, y, z) tuples of points associated to contents.
+
+The space is binned with *step* dimensiones and a histogram is created with the contents.
+
 Only bins with contents > threshold are considered valid cells.
 
 For each cell several information is provided:
 
-content, gradient, laplacian, minimum and maximum curvature, node number,
-and number of neighbour cells belonging to another node.
+contents, gradient, laplacian, minimum and maximum curvature, node number,
+and number of neighbour cells belonging to another node, and graph id
 
-A dictionary, nodes_edges, with the edes between the nodes is also provided.
+Other information:
+
+  * A list, graphs, graph_nodes, with the list of nodes in each graph
+  * A dictionary, nodes_edges, with the edes between the nodes.
 
 """
-function clouds(coors, energy, steps, threshold = 0.)
+function clouds(coors, energy, steps; threshold = 0., cellnode = false)
 
     ndim  = length(coors)
     nsize = length(coors[1])
@@ -104,7 +106,7 @@ function clouds(coors, energy, steps, threshold = 0.)
     #xs, ys = mesh(edges)
 
     # nodes
-    xnodes  = _nodes(igrad, cells, mm)
+    xnodes  = cellnode ?  (1:length(cells)) : _nodes(igrad, cells, mm)
     xborders, xneigh = _neighbour_node(ucoors, xnodes, edges, steps, mm)
 
 	xlinks  = _links(xnodes, xneigh)
@@ -124,22 +126,6 @@ function clouds(coors, energy, steps, threshold = 0.)
 			graphs_nodes = xgraphs,
 			nodes_edges = xlinks)
 	return xcl
-
-	#
-	# df = DF.DataFrame()
-	# for (i, coor) in enumerate(xcl.coors)
-	# 	df[!, 'x'*string(i)] = coor
-	# end
-	# df[!, :contents] = xcl.contents
-	# df[!, :grad]     = xcl.grad
-	# df[!, :igrad]    = xcl.igrad
-	# df[!, :lap]      = xcl.lap
-	# df[!, :curmax]   = xcl.curmax
-	# df[!, :icurmax]  = xcl.icurmax
-	# df[!, :nodes]    = xcl.nodes
-	# df[!, :nborders] = xcl.nborders
-	#
-	# return (edges = edges, df = df, nodes_edges = xlinks)
 
 end
 
@@ -162,9 +148,35 @@ function nodes(xcl)
 	data = (size = nsize, contents = contents, maxcontent = maxcontent,
 	        maxgrad = maxgrad, maxlap = maxlap, minlap = minlap,
 			maxcur = maxcur, mincur = mincur,
-			nlinks = nlinks)
+			nedges = nlinks)
 	return data
 end
+
+#---------------
+#  Graphs
+#----------------
+
+
+function create_graphs(nodes_edges)
+
+	nnodes = length(keys(nodes_edges))
+	graphs = []
+	g = GG.Graph(nnodes)
+	for inode in keys(nodes_edges)
+		for knode in nodes_edges[inode]
+			GG.add_edge!(g, inode, knode)
+		end
+	end
+
+	ecc = GG.eccentricity(g)
+	_mst = GG.prim_mst(g)
+	mst = [mi.src for mi in _mst]
+	append!(mst, _mst[length(_mst)].dst)
+
+	return g, ecc, _mst
+
+end
+
 
 #-----------------------------
 #  Clouds internal functions
