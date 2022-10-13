@@ -109,7 +109,8 @@ function clouds(coors, energy, steps, threshold = 0.)
 
 	xlinks  = _links(xnodes, xneigh)
 
-	xgraphs = _graph_nodes(xlinks)
+	xgraphs  = _graph_nodes(xlinks)
+	xgraphid = _graphid(xnodes, xgraphs)
 
     # output
     xcl = (edges = edges,  coors = coors, contents = contents[cells],
@@ -118,9 +119,10 @@ function clouds(coors, energy, steps, threshold = 0.)
             lap = lap[cells], #curves = curves,
             curmax = curmax[cells], icurmax = icurmax[cells],
             curmin = curmin[cells], icurmin = icurmin[cells],
-            nodes  = xnodes,
+            node   = xnodes, graph = xgraphid,
             nborders = xborders[cells],
-			nodes_edges = xlinks, graphs_nodes = xgraphs)
+			graphs_nodes = xgraphs,
+			nodes_edges = xlinks)
 	return xcl
 
 	#
@@ -147,18 +149,19 @@ end
 #-----------------------------
 
 function nodes(xcl)
-	nnodes   = maximum(xcl.nodes)
-	nsize    = [sum(xcl.nodes .== inode) for inode in 1:nnodes]
-	contents = [sum(xcl.contents[xcl.nodes .== inode]) for inode in 1:nnodes]
-	maxcontent  = [maximum(xcl.contents[xcl.nodes .== inode]) for inode in 1:nnodes]
-	maxgrad  = [maximum(xcl.grad[xcl.nodes .== inode]) for inode in 1:nnodes]
-	maxlap   = [maximum(xcl.lap[xcl.nodes .== inode]) for inode in 1:nnodes]
-	minlap   = [minimum(xcl.lap[xcl.nodes .== inode]) for inode in 1:nnodes]
-	maxcur   = [maximum(xcl.curmax[xcl.nodes .== inode]) for inode in 1:nnodes]
-	mincur   = [minimum(xcl.curmin[xcl.nodes .== inode]) for inode in 1:nnodes]
+	nnodes   = maximum(xcl.node)
+	nsize    = [sum(xcl.node .== inode) for inode in 1:nnodes]
+	contents = [sum(xcl.contents[xcl.node .== inode]) for inode in 1:nnodes]
+	maxcontent  = [maximum(xcl.contents[xcl.node .== inode]) for inode in 1:nnodes]
+	maxgrad  = [maximum(xcl.grad[xcl.node .== inode]) for inode in 1:nnodes]
+	maxlap   = [maximum(xcl.lap[xcl.node .== inode]) for inode in 1:nnodes]
+	minlap   = [minimum(xcl.lap[xcl.node .== inode]) for inode in 1:nnodes]
+	maxcur   = [maximum(xcl.curmax[xcl.node .== inode]) for inode in 1:nnodes]
+	mincur   = [minimum(xcl.curmin[xcl.node .== inode]) for inode in 1:nnodes]
 	nlinks   = [length(xcl.nodes_edges[inode]) for inode in 1:nnodes]
 	data = (size = nsize, contents = contents, maxcontent = maxcontent,
-	        maxgrad = maxgrad, maxcur = maxcur, mincur = mincur,
+	        maxgrad = maxgrad, maxlap = maxlap, minlap = minlap,
+			maxcur = maxcur, mincur = mincur,
 			nlinks = nlinks)
 	return data
 end
@@ -279,7 +282,7 @@ function _links(nodes, neighs)
 
 	imove0 = length(neighs) > 9 ? 14 : 5
 
-	dus     = Dict()
+	dus     = Dict{Int64, Array{Int64, 1}}()
 	for inode in nodes
 		imask = neighs[imove0] .== inode
 		us = []
@@ -315,10 +318,21 @@ function _graph_nodes(nodes_edges)
 		if any([inode in graph for graph in graphs])
 			continue
 		else
-			igraph = []
+			igraph = Array{Int64, 1}()
 			igraph = _add(igraph, inode)
 			append!(graphs, igraph)
 		end
 	end
 	return graphs
+end
+
+function _graphid(xnodes, xgraphs)
+
+	graphid = zeros(Int64, length(xnodes))
+	for (i, graph) in enumerate(xgraphs)
+		for inode in graph
+			graphid[xnodes .== inode] .= i
+		end
+	end
+	return graphid
 end
