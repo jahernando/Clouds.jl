@@ -2,6 +2,7 @@
 #using Base
 import StatsBase as SB
 import LinearAlgebra as LA
+#import DataFrames as DF
 
 
 #export mesh, quiver
@@ -103,20 +104,40 @@ function clouds(coors, energy, steps, threshold = 0.)
     #xs, ys = mesh(edges)
 
     # nodes
-    xnodes = _nodes(igrad, cells, mm)
+    xnodes  = _nodes(igrad, cells, mm)
     xborders, xneigh = _neighbour_node(ucoors, xnodes, edges, steps, mm)
 
-	xlinks = _links(xnodes, xneigh)
+	xlinks  = _links(xnodes, xneigh)
+
+	xgraphs = _graph_nodes(xlinks)
 
     # output
-    return (edges = edges,  coors = coors, contents = contents[cells],
+    xcl = (edges = edges,  coors = coors, contents = contents[cells],
 			cells = cells,
             grad = grad[cells], igrad = igrad[cells],
             lap = lap[cells], #curves = curves,
             curmax = curmax[cells], icurmax = icurmax[cells],
             curmin = curmin[cells], icurmin = icurmin[cells],
             nodes  = xnodes,
-            nborders = xborders[cells], nodes_edges = xlinks)
+            nborders = xborders[cells],
+			nodes_edges = xlinks, graphs_nodes = xgraphs)
+	return xcl
+
+	#
+	# df = DF.DataFrame()
+	# for (i, coor) in enumerate(xcl.coors)
+	# 	df[!, 'x'*string(i)] = coor
+	# end
+	# df[!, :contents] = xcl.contents
+	# df[!, :grad]     = xcl.grad
+	# df[!, :igrad]    = xcl.igrad
+	# df[!, :lap]      = xcl.lap
+	# df[!, :curmax]   = xcl.curmax
+	# df[!, :icurmax]  = xcl.icurmax
+	# df[!, :nodes]    = xcl.nodes
+	# df[!, :nborders] = xcl.nborders
+	#
+	# return (edges = edges, df = df, nodes_edges = xlinks)
 
 end
 
@@ -239,6 +260,7 @@ function _nodes(igrad, cells, m)
 	return nodes
 end
 
+
 function _neighbour_node(ucoors, nodes, edges, steps, m)
 
     his = [SB.fit(SB.Histogram, _hcoors(ucoors, steps .* move),
@@ -273,4 +295,30 @@ function _links(nodes, neighs)
 		dus[inode] = us
 	end
 	return dus
+end
+
+
+function _graph_nodes(nodes_edges)
+	function _add(graph, inode)
+		if (inode in graph)
+			return graph
+		end
+		append!(graph, inode)
+		knodes = nodes_edges[inode]
+		for knode in knodes
+			graph = _add(graph, knode)
+		end
+		return graph
+	end
+	graphs = []
+	for inode in keys(nodes_edges)
+		if any([inode in graph for graph in graphs])
+			continue
+		else
+			igraph = []
+			igraph = _add(igraph, inode)
+			append!(graphs, igraph)
+		end
+	end
+	return graphs
 end
