@@ -7,7 +7,7 @@ import Graphs        as GG
 
 
 #export mesh, quiver
-export moves, clouds, nodes
+export moves, clouds
 
 #----------
 # Moves
@@ -106,9 +106,7 @@ function clouds(coors, energy, steps; threshold = 0., cellnode = false)
     # maximum and monimum curvatures
     curmax, icurmax, curmin, icurmin = _maxmin_curvatures(Base.size(lap), curves, mm)
 
-    #xs, ys = mesh(edges)
-
-    # nodes
+	# nodes
     xnodes  = cellnode ?  (1:length(cells)) : _nodes(igrad, cells, mm)
     xborders, xneigh = _neighbour_node(ucoors_cells, xnodes, edges, steps, mm)
 
@@ -116,48 +114,50 @@ function clouds(coors, energy, steps; threshold = 0., cellnode = false)
 	xcloud_nodes  = _cloud_nodes(xnodes_edges)
 	xcloudid      = _cloudid(xnodes, xcloud_nodes)
 
-    # output
-    xcl = (edges = edges,  coors = coors_cells, contents = contents[cells],
-			cells = cells,
-            grad = grad[cells], igrad = igrad[cells],
-            lap = lap[cells], #curves = curves,
-            curmax = curmax[cells], icurmax = icurmax[cells],
-            curmin = curmin[cells], icurmin = icurmin[cells],
-            node   = xnodes, cloud = xcloudid,
-            nborders = xborders[cells],
-			cloud_nodes = xcloud_nodes,
-			nodes_edges = xnodes_edges)
-	return xcl
+	# cells data
+	dfcells = (coors = coors_cells, contents = contents[cells],
+			   cells = cells,
+               grad = grad[cells], igrad = igrad[cells],
+               lap = lap[cells], #curves = curves,
+               curmax = curmax[cells], icurmax = icurmax[cells],
+               curmin = curmin[cells], icurmin = icurmin[cells],
+			   node   = xnodes, cloud = xcloudid,
+               nborders = xborders[cells])
+
+	# node data
+	dfnodes = _dfnodes(dfcells, xnodes_edges)
+
+	# create graph
+	graph, ecc = _graph(xnodes_edges)
+	dfnodes   = merge(dfnodes, (ecc = ecc, ))
+
+	return dfcells, dfnodes, graph, edges
 
 end
 
 
 #-----------------------------
-# Nodes table
+# Nodes and graph data
 #-----------------------------
 
-function nodes(xcl)
+function _dfnodes(xcl, nodes_edges)
 	nnodes   = maximum(xcl.node)
 	nsize    = [sum(xcl.node .== inode) for inode in 1:nnodes]
 	contents = [sum(xcl.contents[xcl.node .== inode]) for inode in 1:nnodes]
 	maxcontent  = [maximum(xcl.contents[xcl.node .== inode]) for inode in 1:nnodes]
-	maxgrad  = [maximum(xcl.grad[xcl.node .== inode]) for inode in 1:nnodes]
-	maxlap   = [maximum(xcl.lap[xcl.node .== inode]) for inode in 1:nnodes]
-	minlap   = [minimum(xcl.lap[xcl.node .== inode]) for inode in 1:nnodes]
-	maxcur   = [maximum(xcl.curmax[xcl.node .== inode]) for inode in 1:nnodes]
-	mincur   = [minimum(xcl.curmin[xcl.node .== inode]) for inode in 1:nnodes]
-	nlinks   = [length(xcl.nodes_edges[inode]) for inode in 1:nnodes]
-	data = (size = nsize, contents = contents, maxcontent = maxcontent,
-	        maxgrad = maxgrad, maxlap = maxlap, minlap = minlap,
-			maxcur = maxcur, mincur = mincur,
-			nedges = nlinks)
-	return data
+	maxgrad  = [maximum(xcl.grad[xcl.node .== inode])    for inode in 1:nnodes]
+	maxlap   = [maximum(xcl.lap[xcl.node .== inode])     for inode in 1:nnodes]
+	minlap   = [minimum(xcl.lap[xcl.node .== inode])     for inode in 1:nnodes]
+	maxcur   = [maximum(xcl.curmax[xcl.node .== inode])  for inode in 1:nnodes]
+	mincur   = [minimum(xcl.curmin[xcl.node .== inode])  for inode in 1:nnodes]
+	cloudid  = [maximum(xcl.cloud[xcl.node .== inode])   for inode in 1:nnodes]
+	nedges   = [length(nodes_edges[inode]) for inode in 1:nnodes]
+	df = (size    = nsize  , contents = contents, maxcontent = maxcontent,
+	      maxgrad = maxgrad, maxlap   = maxlap  , minlap     = minlap,
+		  maxcur  = maxcur , mincur   = mincur  ,
+		  nedges  = nedges, cloud = cloudid)
+	return df
 end
-
-#---------------
-#  Graphs
-#----------------
-
 
 function _graph(nodes_edges)
 
@@ -171,11 +171,11 @@ function _graph(nodes_edges)
 	end
 
 	ecc = GG.eccentricity(g)
-	mst = GG.prim_mst(g)
+	#mst = GG.prim_mst(g)
 #	mst = [mi.src for mi in _mst]
 #	append!(mst, _mst[length(_mst)].dst)
 
-	return g, ecc, mst
+	return g, ecc
 
 end
 

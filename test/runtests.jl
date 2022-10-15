@@ -1,5 +1,6 @@
 using StatsBase
 using LinearAlgebra
+import Graphs as GG
 using Clouds
 using Test
 
@@ -126,7 +127,7 @@ end
         mat  = box2d()
         coors, contents, steps = box_to_coors(mat.contents)
         ndim = 2
-        xcl  = clouds(coors, contents, steps)
+        xcl, _, _, _  = clouds(coors, contents, steps)
         @test sum(contents) == sum(mat.contents)
         @test sum(isapprox.(xcl.contents, vec(mat.contents))) == 3^ndim
         @test sum(isapprox.(xcl.grad    , vec(mat.grad)))     == 3^ndim
@@ -139,7 +140,7 @@ end
         mat  = box3d()
         coors, contents, steps = box_to_coors(mat.contents)
         ndim = 3
-        xcl  = clouds(coors, contents, steps)
+        xcl, _, _, _  = clouds(coors, contents, steps)
         @test sum(contents) == sum(mat.contents)
         @test sum(isapprox.(xcl.contents, vec(mat.contents))) == 3^ndim
         @test sum(isapprox.(xcl.grad    , vec(mat.grad)))     == 3^ndim
@@ -153,7 +154,7 @@ end
         ndim = 3
         scl  = simple_clouds(mat.contents)
         coors, contents, steps = box_to_coors(mat.contents)
-        xcl  = clouds(coors, contents, steps)
+        xcl, _, _, _  = clouds(coors, contents, steps)
         @test sum(isapprox.(xcl.contents, vec(scl.contents))) == 3^ndim
         @test sum(isapprox.(xcl.grad    , vec(scl.grad)))     == 3^ndim
         @test sum(isapprox.(xcl.lap     , vec(scl.lap)))      == 3^ndim
@@ -169,19 +170,30 @@ end
 		b2   = box2d()
 		b2n  = repeat(b2.contents, nn)
 		coors, contents, steps = box_to_coors(b2n)
-		xcl = clouds(coors, contents, steps)
-		@test maximum(xcl.node)  == nn
-		@test maximum(xcl.cloud) == 1
-		xcl = clouds(coors, contents, steps, cellnode = true)
-		@test maximum(xcl.node) == length(xcl.node)
+		xcl, xnd, xgraph, _ = clouds(coors, contents, steps)
+		@test maximum(xcl.node)    == nn
+		@test length(xnd.contents) == nn
+		@test GG.nv(xgraph)        == nn
+		@test maximum(xcl.cloud)   == 1
+		xcl, xnd, xgraph, _ = clouds(coors, contents, steps, cellnode = true)
+		@test maximum(xcl.node)    == length(xcl.node)
+		@test length(xnd.contents) == length(xcl.node)
+		@test GG.nv(xgraph)        == length(xcl.node)
+		@test maximum(xcl.cloud)   == 1
 		b3  = box3d()
 		b3n = repeat(b3.contents, nn)
 		coors, contents, steps = box_to_coors(b3n)
-		xcl = clouds(coors, contents, steps)
-		@test maximum(xcl.node)  == nn
-		@test maximum(xcl.cloud) == 1
-		xcl = clouds(coors, contents, steps, cellnode = true)
+		xcl, xnd, xgraph, _ = clouds(coors, contents, steps)
+		@test maximum(xcl.node)    == nn
+		@test length(xnd.contents) == nn
+		@test GG.nv(xgraph)        == nn
+		@test maximum(xcl.cloud)   == 1
+		xcl, xnd, xgraph, _ = clouds(coors, contents, steps, cellnode = true)
 		@test maximum(xcl.node) == length(xcl.node)
+		@test length(xnd.contents) == length(xcl.node)
+		@test GG.nv(xgraph)        == length(xcl.node)
+		@test maximum(xcl.cloud)   == 1
+
 	end
 
 	@testset "cloudid" begin
@@ -190,14 +202,14 @@ end
 		m2   = b2.contents
 		b2n  = repeat(vcat(m2, 0 .* m2), nn)
 		coors, contents, steps = box_to_coors(b2n)
-		xcl = clouds(coors, contents, steps)
+		xcl, xnd, _, _ = clouds(coors, contents, steps)
 		@test maximum(xcl.node)  == nn
 		@test maximum(xcl.cloud) == nn
 		b3  = box3d()
 		m3  = b3.contents
 		b3n = repeat(vcat(m3, 0 .* m3), nn)
 		coors, contents, steps = box_to_coors(b3n)
-		xcl = clouds(coors, contents, steps)
+		xcl, xnd, xgraph, _ = clouds(coors, contents, steps)
 		@test maximum(xcl.node)  == nn
 		@test maximum(xcl.cloud) == nn
 	end
