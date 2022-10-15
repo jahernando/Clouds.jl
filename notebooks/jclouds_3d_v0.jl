@@ -37,9 +37,6 @@ import MetaGraphs as MG
 import GraphPlot  as GP
 end
 
-# ╔═╡ 4b8cd472-c945-4731-91df-a830268878c7
-using Graphs
-
 # ╔═╡ a57cdb41-c388-4976-bec8-ec0650fb139c
 import Clouds as jc
 
@@ -108,10 +105,24 @@ md"""
 ## Clouds
 """
 
+# ╔═╡ 7cc12053-2bb8-4f24-b1a3-81c7fb679e19
+begin
+bcellnode = @bind xcellnode Select([:bygradient, :bycell])
+
+#blabel = @bind typeevt Select(coll(:contents, :grad, :lap, :curmin, :curmax, :nodes, :nbordes))
+
+md"""
+
+Select the mode nodes are build: using the gradient or create a node for each cell $(bcellnode)
+
+"""
+end
+
 # ╔═╡ f5dbdc6d-6676-4e0c-a70e-a5daafbbd9db
 begin
+cellnode = xcellnode == :bycell
 steps = [edge[2]-edge[1] for edge in img.edges]
-xcl   = jc.clouds(img.coors, img.contents, steps; cellnode = false)
+xcl, xnd, graph, edges  = jc.clouds(img.coors, img.contents, steps; cellnode = cellnode)
 end;
 
 # ╔═╡ 4e43c8e3-89e2-44ca-a6ed-48a364d90486
@@ -123,9 +134,6 @@ steps of the voxels: $(steps[1])
 """
 end
 
-# ╔═╡ ff6e3ab5-8806-4740-9d44-a861cf413687
-xcl
-
 # ╔═╡ 13ac9fdf-46d0-4940-80e3-8619f0609108
 md"""
 
@@ -135,7 +143,7 @@ md"""
 # ╔═╡ a689debb-8763-45c4-a03d-94c8e970b243
 begin
 
-blabel = @bind label Select([:contents, :grad, :lap, :curmax, :curmin, :nodes, :nborders])
+blabel = @bind label Select([:contents, :grad, :lap, :curmax, :curmin, :node, :nborders, :cloud])
 
 #blabel = @bind typeevt Select(coll(:contents, :grad, :lap, :curmin, :curmax, :nodes, :nbordes))
 
@@ -179,16 +187,29 @@ md"""
 ## Nodes
 """
 
-# ╔═╡ 006588af-6212-40b6-a9b7-205f77404355
-xnd = jc.nodes(xcl)
+# ╔═╡ 51e91ee1-f00c-4dea-815b-0e2474f5019a
+DF.DataFrame(xnd)
 
 # ╔═╡ 7b7981ca-1540-48a1-88e1-4f27e7787b70
 md"""
 ## Graph
 """
 
-# ╔═╡ bf57c4b6-a03d-4e5f-91bc-db3f9dccfb78
-xnd.contents
+# ╔═╡ 1c402508-afd3-46a1-8dbc-a23fd9bd63e1
+begin
+GP.gplot(graph, nodelabel=1:GG.nv(graph), nodesize = xnd.contents)
+end
+
+# ╔═╡ 53ed70f6-8ed8-410b-8448-e6f3373240a7
+md"""
+#### Minimum Spanning Tree
+"""
+
+# ╔═╡ 98481aff-2884-4774-ba7e-f0df54c1c8ca
+begin
+mst = GG.Graph(GG.prim_mst(graph))
+GP.gplot(mst, nodelabel = 1:GG.nv(mst), nodesize = xnd.contents)
+end
 
 # ╔═╡ a779ac6e-5bac-46f1-b8ef-1e3d5b111f4d
 md"""
@@ -197,201 +218,31 @@ md"""
 
 """
 
-# ╔═╡ d8a02e0a-db35-4965-8322-8741c3ffbd49
-begin
-"""
-Just a smeared line!
-"""
-function line(;ndim = 3, threshold = 0.)
-
-	tstep = 0.1
-	ts = 0:tstep:1.
-	ax, bx, cx = 5., 0., 0.
-	ay, by, cy = -5., -5., 0.
-	az, bz, cz = 5., -5., 0.
-	xx = cx .* ts .* ts + ax .* ts .+ bx
-	yy = cy .* ts .* ts + ay .* ts .+ by
-	zz = cz .* ts .* ts + az .* ts .+ bz
-
-	zsig  = 5.
-	sigma = 2 * tstep #* ma(ax, ay, az)
-	xxbins = minimum(xx) - zsig .* sigma : sigma : maximum(xx) + zsig .*sigma
-	yybins = minimum(yy) - zsig .* sigma : sigma : maximum(yy) + zsig .*sigma
-	zzbins = minimum(zz) - zsig .* sigma : sigma : maximum(zz) + zsig .*sigma
-
-	heigth  = 1000
-	xxcontents = heigth * ones(Base.size(xx))
-
-	coors = ndim == 2 ? (xx, yy) : (xx, yy, zz)
-	edges = ndim == 2 ? (xxbins, yybins) : (xxbins, yybins, zzbins)
-	hh  = SB.fit(SB.Histogram, coors, SB.weights(xxcontents), edges)
-
-	centers = [(edge[2:end] + edge[1:end-1])./2 for edge in edges]
-
-	factor = 10.
-	sigma_kernel = (sigma * factor) .* ones(ndim)
-	weights_ = IF.imfilter(hh.weights, IF.Kernel.gaussian(sigma_kernel))
-
-	cells    = findall(x -> x .> threshold, weights_)
-	coors    = [[centers[i][cell[i]] for cell in cells] for i in 1:1:ndim]
-	contents = [hh.weights[cell] for cell in cells]
-
-	contents = [weights_[cell] for cell in cells]
-
-	return (coors = coors, cells = cells, contents = contents, edges = edges)
-
-end
-
-end # begin
-
 # ╔═╡ dfa64554-5fb1-4d63-80d3-19aee7a476b8
 begin
-function cplot(cl, label, title, vrange)
+function cplot(cl, label, title, vrange, edges)
 	ndim = length(cl.coors)
 	vals = getfield(cl, label)
 	mask = (vals .>= vrange[1]) .* (vals .<= vrange[2])
 	coors = [c[mask] for c in cl.coors]
 	vvals = vals[mask]
 	theme(:dark)
-	p1 = ndim == 2 ? histogram2d(coors..., weights = vvals, nbins = cl.edges) : p1 = scatter(coors..., zcolor = vvals, alpha = 0.1)
+	p1 = ndim == 2 ? histogram2d(coors..., weights = vvals, nbins = edges) : p1 = scatter(coors..., zcolor = vvals, alpha = 0.1)
 	p2 = histogram(vvals, nbins = 100)
 	plot(p1, p2, title = title)
 end
 end
 
 # ╔═╡ d26c89ae-1629-4e98-8bde-3e8abe8bfd8d
-cplot(img, :contents, :contents, [minimum(img.contents), maximum(img.contents)])
+cplot(img, :contents, :contents, [minimum(img.contents), maximum(img.contents)], img.edges)
 
 # ╔═╡ 1fab453f-5dab-48bb-87d2-1c92b3f6d7cc
-cplot(xcl, label, label, [v0, v1])
-
-# ╔═╡ 16b988b0-887f-4672-b347-9c374fcc3fae
-begin
-
-function cloud_graph(nodes, nodes_edges)
-
-	nnodes = length(unique(nodes))
-	g = GG.Graph(nnodes)
-	for inode in keys(nodes_edges)
-		for knode in nodes_edges[inode]
-			GG.add_edge!(g, inode, knode)
-		end
-	end
-	return g
-end
-end # begin
-
-# ╔═╡ 98481aff-2884-4774-ba7e-f0df54c1c8ca
-GG.prim_mst(gg)
-
-# ╔═╡ 745cd0b8-3290-4c9b-b979-d755957eb38a
-
+cplot(xcl, label, label, [v0, v1], edges)
 
 # ╔═╡ 97fd042c-39f4-403e-a09c-6765bc94a1fb
 md"""
 ## Dev area
 """
-
-# ╔═╡ a53e8c97-9abf-496b-98f1-e9c9e2f3e687
-
-function create_graph(nodes_edges)
-
-	nnodes = length(keys(nodes_edges))
-	graphs = []
-	g = GG.Graph(nnodes)
-	for inode in keys(nodes_edges)
-		for knode in nodes_edges[inode]
-			GG.add_edge!(g, inode, knode)
-		end
-	end
-
-	ecc = GG.eccentricity(g)
-	_mst = GG.prim_mst(g)
-	mst = [mi.src for mi in _mst]
-	append!(mst, _mst[length(_mst)].dst)
-
-	return g, ecc, _mst
-
-end
-
-
-# ╔═╡ 610410c2-12bd-441c-8d9a-b016c7af1286
-begin
-gm = MG.MetaGraph()
-MG.add_vertex!(gm, :A, [7.2,8.6])
-MG.add_vertex!(gm, :B, [3.2,6.7])
-MG.add_vertex!(gm, :C, [6.3,3.9])
-MG.add_vertex!(gm, :D, [2.4,6.7])
-end
-
-# ╔═╡ e2256dd4-f3ff-49fc-8482-fea857d47495
-
-
-# ╔═╡ 07b471a0-ef38-46f7-80a6-f16663c54383
-eccentricity(gg)
-
-# ╔═╡ 3d887671-e6fc-408d-927d-827608887b11
-a = mst[1]
-
-# ╔═╡ 04a99c4e-922a-4db2-9557-2f30d2920417
-a.src
-
-# ╔═╡ 094fa039-84c6-4de6-8f84-3694e7a22eb8
-GG.vertices(graph)
-
-# ╔═╡ 8e93837c-c094-4807-b48c-af5e91e7e926
-# order nodes by energy
-begin
-function _sort_indices(contents, indices; rev = false)
-	vals = sort(collect(zip(contents, indices)); by = first, rev = rev)
-	ovals  = [v[1] for v in vals]
-	oindex = [v[2] for v in vals]
-	dindex = [findall(oindex .== ii)[1] for ii in indices]
-	return ovals, dindex
-end
-end
-
-# ╔═╡ 86c34f80-f373-4765-9fb2-3ee10ea91ad3
-begin
-zip([3, 5, 10], 1:3)
-end
-
-# ╔═╡ d8ba08fc-c49a-44b7-852e-50531b5a33bb
-_sort_indices([1, 5, 10], 1:3; rev =  true)
-
-# ╔═╡ c31a27dd-c7e2-4467-b7cc-7df4a1b9a004
-
-
-# ╔═╡ dc39ffb8-f1cf-4663-98f4-1cb51aeedfb6
-begin
-df = DF.DataFrame()
-for (i, coor) in enumerate(xcl.coors)
-	df[!, 'x'*string(i)] = coor
-end
-df[!, :grad]     = xcl.grad
-df[!, :igrad]    = xcl.igrad
-df[!, :lap]      = xcl.lap
-df[!, :curmax]   = xcl.curmax
-df[!, :icurmax]  = xcl.icurmax
-df[!, :nodes]    = xcl.node
-df[!, :nborders] = xcl.nborders
-end 
-
-# ╔═╡ f3004649-b11f-47ab-a126-414261706e71
-df
-
-# ╔═╡ 1767934c-1471-4481-a3fb-0b63dca9be23
-gg, ecc, mst = create_graph(xcl.nodes_edges)
-
-# ╔═╡ 1c402508-afd3-46a1-8dbc-a23fd9bd63e1
-begin
-gg = cloud_graph(xcl.node, xcl.nodes_edges)
-#GP.gplot(gg, nodelabel=1:GG.nv(gg), edgelabel=1:GG.ne(gg), nodesize = xnd.contents)
-GP.gplot(gg, nodelabel=1:GG.nv(gg), nodesize = xnd.contents)
-end
-
-# ╔═╡ 14988916-d418-4c6d-b242-7637e9e96548
-mst = prim_mst(gg)
 
 # ╔═╡ Cell order:
 # ╟─5dcb2929-115e-459c-b98d-43ae7bcabd3a
@@ -406,40 +257,21 @@ mst = prim_mst(gg)
 # ╟─1a8e9aa9-a47d-40fd-84c6-cfa49f9b1cc4
 # ╠═d26c89ae-1629-4e98-8bde-3e8abe8bfd8d
 # ╟─5a1832c1-33ff-45dc-8f47-212179dbe862
+# ╟─7cc12053-2bb8-4f24-b1a3-81c7fb679e19
 # ╠═f5dbdc6d-6676-4e0c-a70e-a5daafbbd9db
 # ╟─4e43c8e3-89e2-44ca-a6ed-48a364d90486
-# ╟─ff6e3ab5-8806-4740-9d44-a861cf413687
 # ╟─13ac9fdf-46d0-4940-80e3-8619f0609108
 # ╟─a689debb-8763-45c4-a03d-94c8e970b243
-# ╠═8dca9736-1140-495c-98a3-4cb5acc8ffc1
+# ╟─8dca9736-1140-495c-98a3-4cb5acc8ffc1
 # ╟─f17d0274-4a61-423c-a76f-870dcef41a60
 # ╟─e7544908-23e0-4e3a-ad93-2af5e0dc11f1
 # ╠═1fab453f-5dab-48bb-87d2-1c92b3f6d7cc
-# ╠═2814ba8e-58fa-4b68-af7b-b9e6656dcc19
-# ╠═006588af-6212-40b6-a9b7-205f77404355
+# ╟─2814ba8e-58fa-4b68-af7b-b9e6656dcc19
+# ╠═51e91ee1-f00c-4dea-815b-0e2474f5019a
 # ╟─7b7981ca-1540-48a1-88e1-4f27e7787b70
-# ╠═1c402508-afd3-46a1-8dbc-a23fd9bd63e1
-# ╠═98481aff-2884-4774-ba7e-f0df54c1c8ca
-# ╠═bf57c4b6-a03d-4e5f-91bc-db3f9dccfb78
+# ╟─1c402508-afd3-46a1-8dbc-a23fd9bd63e1
+# ╟─53ed70f6-8ed8-410b-8448-e6f3373240a7
+# ╟─98481aff-2884-4774-ba7e-f0df54c1c8ca
 # ╟─a779ac6e-5bac-46f1-b8ef-1e3d5b111f4d
-# ╠═d8a02e0a-db35-4965-8322-8741c3ffbd49
 # ╠═dfa64554-5fb1-4d63-80d3-19aee7a476b8
-# ╠═16b988b0-887f-4672-b347-9c374fcc3fae
-# ╠═745cd0b8-3290-4c9b-b979-d755957eb38a
 # ╠═97fd042c-39f4-403e-a09c-6765bc94a1fb
-# ╠═a53e8c97-9abf-496b-98f1-e9c9e2f3e687
-# ╠═1767934c-1471-4481-a3fb-0b63dca9be23
-# ╠═610410c2-12bd-441c-8d9a-b016c7af1286
-# ╠═4b8cd472-c945-4731-91df-a830268878c7
-# ╠═e2256dd4-f3ff-49fc-8482-fea857d47495
-# ╠═14988916-d418-4c6d-b242-7637e9e96548
-# ╠═07b471a0-ef38-46f7-80a6-f16663c54383
-# ╠═3d887671-e6fc-408d-927d-827608887b11
-# ╠═04a99c4e-922a-4db2-9557-2f30d2920417
-# ╠═094fa039-84c6-4de6-8f84-3694e7a22eb8
-# ╠═8e93837c-c094-4807-b48c-af5e91e7e926
-# ╠═86c34f80-f373-4765-9fb2-3ee10ea91ad3
-# ╠═d8ba08fc-c49a-44b7-852e-50531b5a33bb
-# ╠═c31a27dd-c7e2-4467-b7cc-7df4a1b9a004
-# ╠═dc39ffb8-f1cf-4663-98f4-1cb51aeedfb6
-# ╠═f3004649-b11f-47ab-a126-414261706e71
