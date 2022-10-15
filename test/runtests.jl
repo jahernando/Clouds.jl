@@ -172,12 +172,16 @@ end
 		xcl = clouds(coors, contents, steps)
 		@test maximum(xcl.node)  == nn
 		@test maximum(xcl.cloud) == 1
+		xcl = clouds(coors, contents, steps, cellnode = true)
+		@test maximum(xcl.node) == length(xcl.node)
 		b3  = box3d()
 		b3n = repeat(b3.contents, nn)
 		coors, contents, steps = box_to_coors(b3n)
 		xcl = clouds(coors, contents, steps)
 		@test maximum(xcl.node)  == nn
 		@test maximum(xcl.cloud) == 1
+		xcl = clouds(coors, contents, steps, cellnode = true)
+		@test maximum(xcl.node) == length(xcl.node)
 	end
 
 	@testset "cloudid" begin
