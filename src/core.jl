@@ -89,6 +89,9 @@ function clouds(coors, energy, steps; threshold = 0., cellnode = false)
     histo    = SB.fit(SB.Histogram, _hcoors(ucoors, m0), SB.weights(energy), edges)
     contents = deepcopy(histo.weights)
 	cells    = findall(x -> x .> threshold, contents)
+	coors_cells  = _xcoors(cells, edges)
+	ucoors_cells = reduce(hcat, coors_cells)
+
 
     # deltas
     deltas = _deltas(ucoors, energy, edges, steps, mm, threshold)
@@ -107,24 +110,23 @@ function clouds(coors, energy, steps; threshold = 0., cellnode = false)
 
     # nodes
     xnodes  = cellnode ?  (1:length(cells)) : _nodes(igrad, cells, mm)
-    xborders, xneigh = _neighbour_node(ucoors, xnodes, edges, steps, mm)
+    xborders, xneigh = _neighbour_node(ucoors_cells, xnodes, edges, steps, mm)
 
-	xlinks  = _links(xnodes, xneigh)
-
-	xgraphs  = _graph_nodes(xlinks)
-	xgraphid = _graphid(xnodes, xgraphs)
+	xnodes_edges  = _nodes_edges(xnodes, xneigh)
+	xcloud_nodes  = _cloud_nodes(xnodes_edges)
+	xcloudid      = _cloudid(xnodes, xcloud_nodes)
 
     # output
-    xcl = (edges = edges,  coors = coors, contents = contents[cells],
+    xcl = (edges = edges,  coors = coors_cells, contents = contents[cells],
 			cells = cells,
             grad = grad[cells], igrad = igrad[cells],
             lap = lap[cells], #curves = curves,
             curmax = curmax[cells], icurmax = icurmax[cells],
             curmin = curmin[cells], icurmin = icurmin[cells],
-            node   = xnodes, graph = xgraphid,
+            node   = xnodes, cloud = xcloudid,
             nborders = xborders[cells],
-			graphs_nodes = xgraphs,
-			nodes_edges = xlinks)
+			cloud_nodes = xcloud_nodes,
+			nodes_edges = xnodes_edges)
 	return xcl
 
 end
@@ -157,7 +159,7 @@ end
 #----------------
 
 
-function create_graphs(nodes_edges)
+function _graph(nodes_edges)
 
 	nnodes = length(keys(nodes_edges))
 	graphs = []
@@ -169,11 +171,11 @@ function create_graphs(nodes_edges)
 	end
 
 	ecc = GG.eccentricity(g)
-	_mst = GG.prim_mst(g)
-	mst = [mi.src for mi in _mst]
-	append!(mst, _mst[length(_mst)].dst)
+	mst = GG.prim_mst(g)
+#	mst = [mi.src for mi in _mst]
+#	append!(mst, _mst[length(_mst)].dst)
 
-	return g, ecc, _mst
+	return g, ecc, mst
 
 end
 
@@ -181,6 +183,15 @@ end
 #-----------------------------
 #  Clouds internal functions
 #-----------------------------
+
+
+function _xcoors(cells, edges)
+	ndim    = length(edges)
+	centers = [(ex[2:end] + ex[1:end-1])/2.0 for ex in edges]
+	indices = [getindex.(cells, i) for i in 1:ndim]
+	coors   = [ci[ii] for (ci, ii) in zip(centers, indices)]
+	return coors
+end
 
 function _hcoors(ucoors, move)
 	ndim = length(move)
@@ -290,7 +301,7 @@ function _neighbour_node(ucoors, nodes, edges, steps, m)
 end
 
 
-function _links(nodes, neighs)
+function _nodes_edges(nodes, neighs)
 
 	imove0 = length(neighs) > 9 ? 14 : 5
 
@@ -312,37 +323,39 @@ function _links(nodes, neighs)
 	return dus
 end
 
-
-function _graph_nodes(nodes_edges)
+function _cloud_nodes(nodes_edges)
+	# TODO: clean this ugly function!
+	used   = []
 	function _add(graph, inode)
-		if (inode in graph)
-			return graph
-		end
 		append!(graph, inode)
+		append!(used , inode)
 		knodes = nodes_edges[inode]
 		for knode in knodes
-			graph = _add(graph, knode)
+			if !(knode in graph)
+				_add(graph, knode)
+			end
 		end
-		return graph
 	end
-	graphs = []
+	graphs = Dict()
+	i = 0
 	for inode in keys(nodes_edges)
-		if any([inode in graph for graph in graphs])
+		if inode in used
 			continue
 		else
-			igraph = Array{Int64, 1}()
-			igraph = _add(igraph, inode)
-			append!(graphs, igraph)
+			igraph = [] # Array{Int64, 1}()
+			_add(igraph, inode)
+			i += 1
+			graphs[i] = igraph
 		end
 	end
 	return graphs
 end
 
-function _graphid(xnodes, xgraphs)
+function _cloudid(xnodes, xclouds_nodes)
 
 	graphid = zeros(Int64, length(xnodes))
-	for (i, graph) in enumerate(xgraphs)
-		for inode in graph
+	for i in keys(xclouds_nodes)
+		for inode in xclouds_nodes[i]
 			graphid[xnodes .== inode] .= i
 		end
 	end

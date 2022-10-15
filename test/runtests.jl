@@ -1,3 +1,4 @@
+using StatsBase
 using LinearAlgebra
 using Clouds
 using Test
@@ -159,9 +160,43 @@ end
         @test sum(isapprox.(xcl.curmax  , vec(scl.curmax)))   == 3^ndim
         @test sum(isapprox.(xcl.curmin  , vec(scl.curmin)))   == 3^ndim
         @test sum(scl.igrad   .== scl.igrad)                  == 3^ndim
-        @test sum(scl.icurmax .== scl.icurmax)                 == 3^ndim
-        @test sum(scl.icurmin .== scl.icurmin)                 == 3^ndim
+        @test sum(scl.icurmax .== scl.icurmax)                == 3^ndim
+        @test sum(scl.icurmin .== scl.icurmin)                == 3^ndim
     end
 
-    # Write your tests here.
+	@testset "nodes" begin
+		nn   = sample(1:10)
+		b2   = box2d()
+		b2n  = repeat(b2.contents, nn)
+		coors, contents, steps = box_to_coors(b2n)
+		xcl = clouds(coors, contents, steps)
+		@test maximum(xcl.node)  == nn
+		@test maximum(xcl.cloud) == 1
+		b3  = box3d()
+		b3n = repeat(b3.contents, nn)
+		coors, contents, steps = box_to_coors(b3n)
+		xcl = clouds(coors, contents, steps)
+		@test maximum(xcl.node)  == nn
+		@test maximum(xcl.cloud) == 1
+	end
+
+	@testset "cloudid" begin
+		nn   = sample(1:10)
+		b2   = box2d()
+		m2   = b2.contents
+		b2n  = repeat(vcat(m2, 0 .* m2), nn)
+		coors, contents, steps = box_to_coors(b2n)
+		xcl = clouds(coors, contents, steps)
+		@test maximum(xcl.node)  == nn
+		@test maximum(xcl.cloud) == nn
+		b3  = box3d()
+		m3  = b3.contents
+		b3n = repeat(vcat(m3, 0 .* m3), nn)
+		coors, contents, steps = box_to_coors(b3n)
+		xcl = clouds(coors, contents, steps)
+		@test maximum(xcl.node)  == nn
+		@test maximum(xcl.cloud) == nn
+	end
+
+
 end
