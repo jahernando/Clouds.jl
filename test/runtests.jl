@@ -92,9 +92,16 @@ function simple_clouds(bs; threshold = 0.0)
 
 end
 
-#----- moves
+function _stats(coors, contents)
+	norma = sum(contents)
+	means = [ sum(coor .* contents)/norma for coor in coors]
+	stds  = [ sqrt(sum(contents .* (coor .- mean).^2)/norma)
+			  for (mean, coor) in zip(means, coors)]
+	return means, stds
+end
 
-#--------------------------
+#--------
+
 # Test
 #---------------------------
 
@@ -193,7 +200,6 @@ end
 		@test length(xnd.contents) == length(xcl.node)
 		@test GG.nv(xgraph)        == length(xcl.node)
 		@test maximum(xcl.cloud)   == 1
-
 	end
 
 	@testset "cloudid" begin
@@ -228,6 +234,30 @@ end
 		@test xnd.curmax[1]     == maximum(b2.curmax)
 		@test xnd.curmin[1]     == minimum(b2.curmin)
 		@test xnd.nedges[1]     == 0
+	end
+
+	@testset "nodescoors" begin
+		b2 = box2d()
+		coors, contents, steps = box_to_coors(b2.contents)
+		xcl, xnd, graph, edges = clouds(coors, contents, steps)
+		i0  = argmax(contents)
+		means, stds = _stats(coors, contents)
+		@test all(xnd.coors_cell .== [[c[i0]] for c in coors])
+		@test all([c[1] .== mean for (c, mean) in zip(xnd.coors, means)])
+		@test all([c[1] .== std  for (c, std)  in zip(xnd.coors_std, stds)])
+		b3 = box3d()
+		coors, contents, steps = box_to_coors(b3.contents)
+		xcl, xnd, graph, edges = clouds(coors, contents, steps)
+		i0  = argmax(contents)
+		means, stds = _stats(coors, contents)
+		@test all(xnd.coors_cell .== [[c[i0]] for c in coors])
+		@test all([c[1] .== mean for (c, mean) in zip(xnd.coors, means)])
+		@test all([c[1] .== std  for (c, std)  in zip(xnd.coors_std, stds)])
+		b2 = box2d()
+		coors, contents, steps = box_to_coors(b2.contents)
+		xcl, xnd, graph, edges = clouds(coors, contents, steps, cellnode = true)
+		@test all(xnd.coors_cell .== xnd.coors) == true
+		@test sum(sum(xnd.coors_std)) == 0.0
 	end
 
 end

@@ -116,7 +116,7 @@ function clouds(coors, energy, steps; threshold = 0., cellnode = false)
 
 	# cells data
 	dfcells = (coors = coors_cells, contents = contents[cells],
-			   cells = cells,
+			   cells = Tuple.(cells),
                grad = grad[cells], igrad = igrad[cells],
                lap = lap[cells], #curves = curves,
                curmax = curmax[cells], icurmax = icurmax[cells],
@@ -125,7 +125,7 @@ function clouds(coors, energy, steps; threshold = 0., cellnode = false)
                nborders = xborders[cells])
 
 	# node data
-	dfnodes = _dfnodes(dfcells, xnodes_edges)
+	dfnodes = _dfnodes(dfcells, xnodes_edges, cellnode = cellnode)
 
 	# create graph
 	graph, ecc = _graph(xnodes_edges)
@@ -140,7 +140,8 @@ end
 # Nodes and graph data
 #-----------------------------
 
-function _dfnodes(xcl, nodes_edges)
+
+function _dfnodes(xcl, nodes_edges; cellnode = false)
 	nnodes   = maximum(xcl.node)
 	nsize    = [sum(xcl.node .== inode) for inode in 1:nnodes]
 	contents = [sum(xcl.contents[xcl.node .== inode]) for inode in 1:nnodes]
@@ -152,10 +153,29 @@ function _dfnodes(xcl, nodes_edges)
 	curmin   = [minimum(xcl.curmin[xcl.node .== inode])  for inode in 1:nnodes]
 	cloudid  = [maximum(xcl.cloud[xcl.node .== inode])   for inode in 1:nnodes]
 	nedges   = [length(nodes_edges[inode]) for inode in 1:nnodes]
+
+	#weights  = _w(xcl)
+
+	function _stats(coor, inode)
+		sel   = xcl.node .== inode
+		norma = sum(xcl.contents[sel])
+		mean  = sum(xcl.contents[sel] .* coor[sel])/norma
+		std   = sqrt(sum(xcl.contents[sel] .* (coor[sel] .- mean).^2)/norma)
+		return  mean, std
+	end
+
+	coors = [[_stats(coor, inode)[1] for inode in 1:nnodes] for coor in xcl.coors]
+	stds  = [[_stats(coor, inode)[2] for inode in 1:nnodes] for coor in xcl.coors]
+
+	_sel = inode -> cellnode ? xcl.node .== inode : (xcl.node .== inode) .&& (xcl.grad .== 0.0)
+	coors_cell = [[coor[_sel(inode)][1] for inode in 1:nnodes] for coor in xcl.coors]
+
 	df = (size    = nsize  , contents = contents, maxcontent = maxcontent,
 	      maxgrad = maxgrad, maxlap   = maxlap  , minlap     = minlap,
-		  curmax  = curmax , curmin   = curmin  ,
-		  nedges  = nedges, cloud = cloudid)
+		  curmax  = curmax , curmin   = curmin,
+		  nedges  = nedges,  cloud    = cloudid,
+		  coors   = coors,   coors_std  = stds,
+		  coors_cell = coors_cell)
 	return df
 end
 
@@ -171,10 +191,6 @@ function _graph(nodes_edges)
 	end
 
 	ecc = GG.eccentricity(g)
-	#mst = GG.prim_mst(g)
-#	mst = [mi.src for mi in _mst]
-#	append!(mst, _mst[length(_mst)].dst)
-
 	return g, ecc
 
 end
