@@ -26,17 +26,28 @@ i.e 2D: null [0., 0.], symmetric pair ([1, 0], [-1, 0]),
 ortogonal directions of the previous pair ([0, 1], [0, -1])
 
 """
+
+struct Moves
+
+	moves::Vector{Vector{Int64}}                     # list of movements
+	i0::Int64                                        # index of the null movement
+	isym::Vector{Tuple{Int64, Int64}}                # list of tuple of symmetric movements
+	iortho::Dict{Tuple{Int64, Int64}, Vector{Int64}} # dictionary with the tuple of orthogonal summetric
+
+end
+
 function moves(ndim)
 	moves = ndim == 2 ? [[i, j] for i in -1:1:1 for j in -1:1:1] : [[i, j, k] for i in -1:1:1 for j in -1:1:1 for k in -1:1:1]
 	move0 = ndim == 2 ? [0, 0] : [0, 0, 0]
 	kmove0 = [i for (i, move) in enumerate(moves) if (move == move0)][1]
 	smoves = [(i, j) for (i, movei) in enumerate(moves) for (j, movej) in enumerate(moves) if (movei == -1 .* movej ) &  (i > j)]
-	omoves = Dict()
+	omoves = Dict{Tuple{Int64, Int64}, Vector{Int64}}()
 	for ii in smoves
 		movei = moves[ii[1]]
 		omoves[ii] = [j for (j, movej) in enumerate(moves) if ((sum(movej .* movei) == 0.0) & (sum(movej .* movej) != 0.0))]
 	end
-	return (moves = moves, i0 = kmove0, isym = smoves, iortho = omoves)
+	#return (moves = moves, i0 = kmove0, isym = smoves, iortho = omoves)
+	return Moves(moves, kmove0, smoves, omoves)
 end
 
 
