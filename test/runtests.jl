@@ -214,5 +214,20 @@ end
 		@test maximum(xcl.cloud) == nn
 	end
 
+	@testset "nodedata" begin
+		b2   = box2d()
+		m2   = b2.contents
+		coors, contents, steps = box_to_coors(b2.contents)
+		_, xnd, _, _ = clouds(coors, contents, steps)
+		@test xnd.size[1]       == length(contents)
+		@test xnd.contents[1]   == sum(contents)
+		@test xnd.maxcontent[1] == maximum(contents)
+		@test xnd.maxgrad[1]    == maximum(b2.grad)
+		@test xnd.maxlap[1]     == maximum(b2.lap)
+		@test xnd.minlap[1]     == minimum(b2.lap)
+		@test xnd.curmax[1]     == maximum(b2.curmax)
+		@test xnd.curmin[1]     == minimum(b2.curmin)
+		@test xnd.nedges[1]     == 0
+	end
 
 end

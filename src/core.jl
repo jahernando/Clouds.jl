@@ -148,13 +148,13 @@ function _dfnodes(xcl, nodes_edges)
 	maxgrad  = [maximum(xcl.grad[xcl.node .== inode])    for inode in 1:nnodes]
 	maxlap   = [maximum(xcl.lap[xcl.node .== inode])     for inode in 1:nnodes]
 	minlap   = [minimum(xcl.lap[xcl.node .== inode])     for inode in 1:nnodes]
-	maxcur   = [maximum(xcl.curmax[xcl.node .== inode])  for inode in 1:nnodes]
-	mincur   = [minimum(xcl.curmin[xcl.node .== inode])  for inode in 1:nnodes]
+	curmax   = [maximum(xcl.curmax[xcl.node .== inode])  for inode in 1:nnodes]
+	curmin   = [minimum(xcl.curmin[xcl.node .== inode])  for inode in 1:nnodes]
 	cloudid  = [maximum(xcl.cloud[xcl.node .== inode])   for inode in 1:nnodes]
 	nedges   = [length(nodes_edges[inode]) for inode in 1:nnodes]
 	df = (size    = nsize  , contents = contents, maxcontent = maxcontent,
 	      maxgrad = maxgrad, maxlap   = maxlap  , minlap     = minlap,
-		  maxcur  = maxcur , mincur   = mincur  ,
+		  curmax  = curmax , curmin   = curmin  ,
 		  nedges  = nedges, cloud = cloudid)
 	return df
 end

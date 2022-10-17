@@ -42,17 +42,10 @@ import Clouds as jc
 
 # ╔═╡ cdc50171-b288-40b6-9d0d-9511901218e0
 md"""
-
 ## Description
-
-
 Dev NB for clouds 3D in Julia
-
-
 J.A. Hernado,
-
 Santiago, September 2022
-
 ---
 """
 
@@ -64,11 +57,8 @@ plotly();
 
 # ╔═╡ 7408b8f3-31f8-4764-bbf1-2bf9b245a8bb
 md"""
-
 ## Generate Image
-
 Produces a smeared curve in 2D or ·D
-
 """
 
 # ╔═╡ e8848fd9-205e-4b56-b192-62f1acda8d7e
@@ -78,9 +68,7 @@ bndim = @bind nndim Select([2, 3])
 #blabel = @bind typeevt Select(coll(:contents, :grad, :lap, :curmin, :curmax, :nodes, :nbordes))
 
 md"""
-
 Select dimensions of the line $(bndim)
-
 """
 end
 
@@ -93,15 +81,12 @@ end;
 begin
 
 md"""
-
 **Image**
-
 """
 end
 
 # ╔═╡ 5a1832c1-33ff-45dc-8f47-212179dbe862
 md"""
-
 ## Clouds
 """
 
@@ -112,9 +97,7 @@ bcellnode = @bind xcellnode Select([:bygradient, :bycell])
 #blabel = @bind typeevt Select(coll(:contents, :grad, :lap, :curmin, :curmax, :nodes, :nbordes))
 
 md"""
-
 Select the mode nodes are build: using the gradient or create a node for each cell $(bcellnode)
-
 """
 end
 
@@ -128,15 +111,12 @@ end;
 # ╔═╡ 4e43c8e3-89e2-44ca-a6ed-48a364d90486
 begin
 md"""
-
 steps of the voxels: $(steps[1])
-
 """
 end
 
 # ╔═╡ 13ac9fdf-46d0-4940-80e3-8619f0609108
 md"""
-
 ## Plots
 """
 
@@ -148,9 +128,7 @@ blabel = @bind label Select([:contents, :grad, :lap, :curmax, :curmin, :node, :n
 #blabel = @bind typeevt Select(coll(:contents, :grad, :lap, :curmin, :curmax, :nodes, :nbordes))
 
 md"""
-
 Select label to plot $(blabel)
-
 """
 end
 
@@ -165,25 +143,19 @@ begin
 brange0 = @bind v0 Slider(minv:maxv, default = minv)
 brange1 = @bind v1 Slider(minv:maxv, default = maxv)
 md"""
-
 Selec range for variable $(label):
-
 minimum $(brange0)
 maximum  $(brange1)
-
 """
 end
 
 # ╔═╡ e7544908-23e0-4e3a-ad93-2af5e0dc11f1
 md"""
-
 Selected range : [ $(v0), $(v1) ]
-
 """
 
 # ╔═╡ 2814ba8e-58fa-4b68-af7b-b9e6656dcc19
 md"""
-
 ## Nodes
 """
 
@@ -213,9 +185,7 @@ end
 
 # ╔═╡ a779ac6e-5bac-46f1-b8ef-1e3d5b111f4d
 md"""
-
 ## Code
-
 """
 
 # ╔═╡ dfa64554-5fb1-4d63-80d3-19aee7a476b8
