@@ -43,7 +43,7 @@ import Clouds as jc
 # ╔═╡ cdc50171-b288-40b6-9d0d-9511901218e0
 md"""
 ## Description
-Dev NB for clouds 3D in Julia
+Clouds example - a line in 2D/3D 
 J.A. Hernado,
 Santiago, September 2022
 ---
@@ -104,7 +104,7 @@ end
 # ╔═╡ f5dbdc6d-6676-4e0c-a70e-a5daafbbd9db
 begin
 cellnode = xcellnode == :bycell
-steps = [edge[2]-edge[1] for edge in img.edges]
+steps = Tuple(edge[2]-edge[1] for edge in img.edges)
 xcl, xnd, graph, edges  = jc.clouds(img.coors, img.contents, steps; cellnode = cellnode)
 end;
 
@@ -157,10 +157,9 @@ Selected range : [ $(v0), $(v1) ]
 # ╔═╡ 2814ba8e-58fa-4b68-af7b-b9e6656dcc19
 md"""
 ## Nodes
-"""
 
-# ╔═╡ 51e91ee1-f00c-4dea-815b-0e2474f5019a
-DF.DataFrame(xnd)
+Number of nodes            : $(length(xnd.contents))
+"""
 
 # ╔═╡ 7b7981ca-1540-48a1-88e1-4f27e7787b70
 md"""
@@ -216,7 +215,7 @@ md"""
 
 # ╔═╡ Cell order:
 # ╟─5dcb2929-115e-459c-b98d-43ae7bcabd3a
-# ╠═a9d9186f-19aa-41d7-8ec6-ad5197a74b8b
+# ╟─a9d9186f-19aa-41d7-8ec6-ad5197a74b8b
 # ╠═a57cdb41-c388-4976-bec8-ec0650fb139c
 # ╟─cdc50171-b288-40b6-9d0d-9511901218e0
 # ╟─3922eba2-f322-4b06-b9e0-83bc723d7930
@@ -228,7 +227,7 @@ md"""
 # ╠═d26c89ae-1629-4e98-8bde-3e8abe8bfd8d
 # ╟─5a1832c1-33ff-45dc-8f47-212179dbe862
 # ╟─7cc12053-2bb8-4f24-b1a3-81c7fb679e19
-# ╠═f5dbdc6d-6676-4e0c-a70e-a5daafbbd9db
+# ╟─f5dbdc6d-6676-4e0c-a70e-a5daafbbd9db
 # ╟─4e43c8e3-89e2-44ca-a6ed-48a364d90486
 # ╟─13ac9fdf-46d0-4940-80e3-8619f0609108
 # ╟─a689debb-8763-45c4-a03d-94c8e970b243
@@ -237,7 +236,6 @@ md"""
 # ╟─e7544908-23e0-4e3a-ad93-2af5e0dc11f1
 # ╠═1fab453f-5dab-48bb-87d2-1c92b3f6d7cc
 # ╟─2814ba8e-58fa-4b68-af7b-b9e6656dcc19
-# ╠═51e91ee1-f00c-4dea-815b-0e2474f5019a
 # ╟─7b7981ca-1540-48a1-88e1-4f27e7787b70
 # ╟─1c402508-afd3-46a1-8dbc-a23fd9bd63e1
 # ╟─53ed70f6-8ed8-410b-8448-e6f3373240a7
