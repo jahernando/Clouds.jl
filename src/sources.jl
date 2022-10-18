@@ -1,7 +1,7 @@
 import StatsBase as SB
 import Images.ImageFiltering as IF
 
-export box2d, box3d, line
+export box2d, box3d, line, box_to_coors
 
 
 """

@@ -5,15 +5,6 @@ using Clouds
 using Test
 
 
-function box_to_coors(aa)
-    ndim = length(size(aa))
-    steps = Tuple(ones(ndim))
-    cells = CartesianIndices(aa)
-    coors = Tuple(vec([c[i] for c in cells]) for i in 1:ndim)
-    return coors, vec(aa), steps
-end
-
-
 function simple_clouds(bs; threshold = 0.0)
 
 	# set the input for clouds
