@@ -7,9 +7,9 @@ using Test
 
 function box_to_coors(aa)
     ndim = length(size(aa))
-    steps = ones(ndim)
+    steps = Tuple(ones(ndim))
     cells = CartesianIndices(aa)
-    coors = [vec([c[i] for c in cells]) for i in 1:ndim]
+    coors = Tuple(vec([c[i] for c in cells]) for i in 1:ndim)
     return coors, vec(aa), steps
 end
 
@@ -242,7 +242,7 @@ end
 		xcl, xnd, graph, edges = clouds(coors, contents, steps)
 		i0  = argmax(contents)
 		means, stds = _stats(coors, contents)
-		@test all(xnd.coors_cell .== [[c[i0]] for c in coors])
+		@test all(xnd.coors_cell .== Tuple([c[i0],] for c in coors))
 		@test all([c[1] .== mean for (c, mean) in zip(xnd.coors, means)])
 		@test all([c[1] .== std  for (c, std)  in zip(xnd.coors_std, stds)])
 		b3 = box3d()
@@ -250,7 +250,7 @@ end
 		xcl, xnd, graph, edges = clouds(coors, contents, steps)
 		i0  = argmax(contents)
 		means, stds = _stats(coors, contents)
-		@test all(xnd.coors_cell .== [[c[i0]] for c in coors])
+		@test all(xnd.coors_cell .== Tuple([c[i0],] for c in coors))
 		@test all([c[1] .== mean for (c, mean) in zip(xnd.coors, means)])
 		@test all([c[1] .== std  for (c, std)  in zip(xnd.coors_std, stds)])
 		b2 = box2d()

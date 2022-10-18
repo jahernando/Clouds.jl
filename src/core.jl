@@ -26,22 +26,60 @@ i.e 2D: null [0., 0.], symmetric pair ([1, 0], [-1, 0]),
 ortogonal directions of the previous pair ([0, 1], [0, -1])
 
 """
+#
+# struct Moves2DV3
+#
+# 	# list of movements
+# 	moves::NTuple{9, Tuple{Int64, Int64}}
+# 	# index of the null movement
+# 	i0::Int64
+# 	# list of tuple of symmetric movements
+# 	isym::NTuple{4, Tuple{Int64, Int64}}
+# 	# dictionary with the tuple of orthogonal summetric
+# 	iortho::Dict{Tuple{Int64, Int64}, Tuple{Int64, Int64}}
+#
+# end
+#
+# struct Moves3DV2
+#
+# 	# list of movements
+# 	moves::NTuple{27, Tuple{Int64, Int64, Int64}}
+# 	# index of the null movement
+# 	i0::Int64
+# 	# list of tuple of symmetric movements
+# 	isym::NTuple{13, Tuple{Int64, Int64}}
+# 	# dictionary with the tuple of orthogonal summetric
+# 	iortho::Dict{Tuple{Int64, Int64}, NTuple{8, Int64}}
+#
+# end
+
+# sort-cuts type definitions
+N   = Vararg
+T2I = Tuple{Int64, Int64}
+TNI = Tuple{N{Int64}}
+TNV = Tuple{N{Float64}}
+VI  = Vector{Int64}
+VF  = Vector{Float64}
+VN  = Vector{<:Number}
 
 struct Moves
 
-	moves::Vector{Vector{Int64}}                     # list of movements
-	i0::Int64                                        # index of the null movement
-	isym::Vector{Tuple{Int64, Int64}}                # list of tuple of symmetric movements
-	iortho::Dict{Tuple{Int64, Int64}, Vector{Int64}} # dictionary with the tuple of orthogonal summetric
-
+	moves  ::Tuple{N{VI}}   # list with the vector of unitary movements in 2D or 3D
+	i0     ::Int64          # index of the null movement (0., 0) or (0, 0, 0)
+	isym   ::Tuple{N{T2I}}  # list of the pair of indices of symmetric movements i.e (1, 0), (-1, 0)
+	iortho ::Dict{T2I, VI}  # dictionary with the indices of the ortogonal movements
+	                        # i.e movements (0, 1) (0, -1) are orthogornal to (1, 0), (-1, 0)
 end
 
-function moves(ndim)
-	moves = ndim == 2 ? [[i, j] for i in -1:1:1 for j in -1:1:1] : [[i, j, k] for i in -1:1:1 for j in -1:1:1 for k in -1:1:1]
+function moves(ndim::Int64)
+	moves = ndim == 2 ? Tuple([i, j] for i in -1:1:1 for j in -1:1:1) :
+	     Tuple([i, j, k] for i in -1:1:1 for j in -1:1:1 for k in -1:1:1)
 	move0 = ndim == 2 ? [0, 0] : [0, 0, 0]
 	kmove0 = [i for (i, move) in enumerate(moves) if (move == move0)][1]
-	smoves = [(i, j) for (i, movei) in enumerate(moves) for (j, movej) in enumerate(moves) if (movei == -1 .* movej ) &  (i > j)]
-	omoves = Dict{Tuple{Int64, Int64}, Vector{Int64}}()
+	smoves = Tuple((i, j) for (i, movei) in enumerate(moves)
+	          for (j, movej) in enumerate(moves)
+		      if (movei == -1 .* movej ) &  (i > j))
+	omoves = Dict{T2I, VI}()
 	for ii in smoves
 		movei = moves[ii[1]]
 		omoves[ii] = [j for (j, movej) in enumerate(moves) if ((sum(movej .* movei) == 0.0) & (sum(movej .* movej) != 0.0))]
@@ -54,6 +92,41 @@ end
 #-----
 # Clouds
 #-----
+
+
+struct DataCells
+	coors    ::Tuple{N{VN}}   # (x,y) or (x,y, z) tuple with the cell cordinates
+	contents ::VN             # cell contents
+	cells    ::Vector{TNI}    # Vector with the cell indices, (i, j) or (i, j, k)
+	grad     ::VN             # cell gradient
+	igrad    ::VI             # cell index of the gradient move
+	lap      ::VN             # cell laplacian
+	curmax   ::VN             # cell maximum curvature
+	icurmax  ::VI             # cell index of the move with the maximum curvature
+	curmin   ::VN             # cell minimum curvature
+	icurmin  ::VI             # cell index of the move with the minimum curvature
+	node     ::VI             # node index which this cell belongs to
+	cloud    ::VI             # cloud index which this cell belongs to
+	nborders ::VI             # number of border cells whose belong to another node
+end
+
+struct DataNodes
+
+	size        ::VI             # node size (number of cells into this node)
+	contents    ::VN             # node contents (sum of the cells contents of this node)
+	maxcontent  ::VN             # node maximum content (content of the cell with the maximum content)
+	maxgrad     ::VN             # node maximum gradient
+	maxlap      ::VN             # node maximum laplacian
+	minlap      ::VN             # node minimum laplacian
+	curmax      ::VN             # node maximum curvature
+	curmin      ::VN             # node minimum curvature
+	nedges      ::VI             # number of nodes connected to this node
+	cloud       ::VI             # cloud index which this node belongs to
+	coors       ::Tuple{N{VN}}   # coordenates of the node barycenter
+	coors_std   ::Tuple{N{VN}}   # std of the node coordinates
+	coors_cell  ::Tuple{N{VN}}   # coordenates of the cell with null gradient (top of the node)
+	ecc         ::VI             # distance in nodes of this node to the end of the graph (eccenticity)
+end
 
 """
 
@@ -76,7 +149,13 @@ Other information:
   * A dictionary, nodes_edges, with the edes between the nodes.
 
 """
-function clouds(coors, energy, steps; threshold = 0., cellnode = false)
+function clouds(coors     ::Tuple{N{VN}},  # Tuple with the point coordinates
+	 	        energy    ::VN,            # energy or content of the point coordinates
+				steps     ::TNV;           # Tuple with the step size in each coordinate
+				threshold ::Float64 = 0.0, # energy threshold, default = 0.
+				cellnode  ::Bool = false)  # if cellnode == true create a node for each cell
+						                   # otherwise the node is composed by the cells whose gradient ends
+										   # into a cell with null gradient! (that is, the higuest energy cell)
 
     ndim  = length(coors)
     nsize = length(coors[1])
@@ -126,21 +205,33 @@ function clouds(coors, energy, steps; threshold = 0., cellnode = false)
 	xcloudid      = _cloudid(xnodes, xcloud_nodes)
 
 	# cells data
-	dfcells = (coors = coors_cells, contents = contents[cells],
-			   cells = Tuple.(cells),
-               grad = grad[cells], igrad = igrad[cells],
-               lap = lap[cells], #curves = curves,
-               curmax = curmax[cells], icurmax = icurmax[cells],
-               curmin = curmin[cells], icurmin = icurmin[cells],
-			   node   = xnodes, cloud = xcloudid,
-               nborders = xborders[cells])
+	dfcells = DataCells(coors_cells, contents[cells], Tuple.(cells),
+	 			grad[cells], igrad[cells], lap[cells],
+                curmax[cells], icurmax[cells], curmin[cells], icurmin[cells],
+			    xnodes, xcloudid, xborders[cells])
+
+			#    # cells data
+		   	# dfcells = DataCells(coors = coors_cells, contents = contents[cells],
+		   	# 		   cells = Tuple.(cells),
+		    #               grad = grad[cells], igrad = igrad[cells],
+		    #               lap = lap[cells], #curves = curves,
+		    #               curmax = curmax[cells], icurmax = icurmax[cells],
+		    #               curmin = curmin[cells], icurmin = icurmin[cells],
+		   	# 		   node   = xnodes, cloud = xcloudid,
+		    #               nborders = xborders[cells])
+
+
 
 	# node data
-	dfnodes = _dfnodes(dfcells, xnodes_edges, cellnode = cellnode)
+	dfn = _dfnodes(dfcells, xnodes_edges, cellnode = cellnode)
 
 	# create graph
 	graph, ecc = _graph(xnodes_edges)
-	dfnodes   = merge(dfnodes, (ecc = ecc, ))
+	dfn     = merge(dfn, (ecc = ecc,))
+	dfnodes = DataNodes(dfn.size, dfn.contents, dfn.maxcontent,
+			dfn.maxgrad, dfn.maxlap, dfn.minlap, dfn.curmax, dfn.curmin,
+			dfn.nedges, dfn.cloud, dfn.coors, dfn.coors_std, dfn.coors_cell,
+			dfn.ecc)
 
 	return dfcells, dfnodes, graph, edges
 
@@ -175,11 +266,11 @@ function _dfnodes(xcl, nodes_edges; cellnode = false)
 		return  mean, std
 	end
 
-	coors = [[_stats(coor, inode)[1] for inode in 1:nnodes] for coor in xcl.coors]
-	stds  = [[_stats(coor, inode)[2] for inode in 1:nnodes] for coor in xcl.coors]
+	coors = Tuple([_stats(coor, inode)[1] for inode in 1:nnodes] for coor in xcl.coors)
+	stds  = Tuple([_stats(coor, inode)[2] for inode in 1:nnodes] for coor in xcl.coors)
 
 	_sel = inode -> cellnode ? xcl.node .== inode : (xcl.node .== inode) .&& (xcl.grad .== 0.0)
-	coors_cell = [[coor[_sel(inode)][1] for inode in 1:nnodes] for coor in xcl.coors]
+	coors_cell = Tuple([coor[_sel(inode)][1] for inode in 1:nnodes] for coor in xcl.coors)
 
 	df = (size    = nsize  , contents = contents, maxcontent = maxcontent,
 	      maxgrad = maxgrad, maxlap   = maxlap  , minlap     = minlap,
@@ -216,7 +307,7 @@ function _xcoors(cells, edges)
 	ndim    = length(edges)
 	centers = [(ex[2:end] + ex[1:end-1])/2.0 for ex in edges]
 	indices = [getindex.(cells, i) for i in 1:ndim]
-	coors   = [ci[ii] for (ci, ii) in zip(centers, indices)]
+	coors   = Tuple(ci[ii] for (ci, ii) in zip(centers, indices))
 	return coors
 end
 

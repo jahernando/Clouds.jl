@@ -110,6 +110,15 @@ function box3d(vals = [1, 2, 3, 4])
 
 end
 
+
+function box_to_coors(aa)
+    ndim = length(size(aa))
+    steps = Tuple(ones(ndim))
+    cells = CartesianIndices(aa)
+    coors = Tuple(vec([c[i] for c in cells]) for i in 1:ndim)
+    return coors, vec(aa), steps
+end
+
 """
 returns 3D or 2D points in a line smeared with a gaussian
 
@@ -149,7 +158,7 @@ function line(;ndim = 3, threshold = 0.)
 	weights_ = IF.imfilter(hh.weights, IF.Kernel.gaussian(sigma_kernel))
 
 	cells    = findall(x -> x .> threshold, weights_)
-	coors    = [[centers[i][cell[i]] for cell in cells] for i in 1:1:ndim]
+	coors    = Tuple([centers[i][cell[i]] for cell in cells] for i in 1:1:ndim)
 	contents = [hh.weights[cell] for cell in cells]
 
 	contents = [weights_[cell] for cell in cells]
