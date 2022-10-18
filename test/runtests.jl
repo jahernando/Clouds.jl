@@ -100,6 +100,15 @@ function _stats(coors, contents)
 	return means, stds
 end
 
+function _catch(coors, contents, steps)
+	try
+		xcl, xnd, graph, edges = clouds(coors, contents, steps)
+	catch
+		return true
+	end
+end
+
+
 #--------
 
 # Test
@@ -171,6 +180,28 @@ end
         @test sum(scl.icurmax .== scl.icurmax)                == 3^ndim
         @test sum(scl.icurmin .== scl.icurmin)                == 3^ndim
     end
+
+	@testset "basic" begin
+		b2 = box2d()
+		coors, contents, steps = box_to_coors(b2.contents)
+		xcl, xnd, graph, edges = clouds(coors, contents, steps)
+		@test all([minimum(ci) > minimum(ei) for (ci, ei) in zip(coors, edges)]) == true
+		@test all([maximum(ci) < maximum(ei) for (ci, ei) in zip(coors, edges)]) == true
+		@test sum(isapprox.([ei[2]-ei[1] for ei in edges], steps)) == length(steps)
+	end
+
+	@testset "exceptions" begin
+		b2 = box2d()
+		coors, contents, steps = box_to_coors(b2.contents)
+		ncoors = (coors[1], coors[2], coors[2], coors[2])
+		@test _catch(ncoors, contents, steps) == true
+		ncoors = (coors[1], coors[2][1:5])
+		@test _catch(ncoors, contents, steps) == true
+		ncoors = (coors[1][1:5], coors[2][1:5])
+		@test _catch(ncoors, contents, steps) == true
+		ncoors = (coors[1], coors[2], coors[2])
+		@test _catch(ncoors, contents, steps) == true
+	end
 
 	@testset "nodes" begin
 		nn   = sample(1:10)

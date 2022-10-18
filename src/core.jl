@@ -3,55 +3,12 @@
 import StatsBase     as SB
 import LinearAlgebra as LA
 import Graphs        as GG
-#import DataFrames as DF
 
-
-#export mesh, quiver
 export moves, clouds
 
-#----------
-# Moves
-#----------
-
-"""
-Function that returns a NamedTuple with the one step movement vectors
-in 2D and 3D.
-
-It also returns the null move, the symetric pair of movees,
-and the ortogonal move associated to any symmetric movement.
-The null (*i0*), symmetric (*isym*), and ortogonal movs (*iorto*)
-are indexed respect the main vector of moves (*moves*)
-
-i.e 2D: null [0., 0.], symmetric pair ([1, 0], [-1, 0]),
-ortogonal directions of the previous pair ([0, 1], [0, -1])
-
-"""
-#
-# struct Moves2DV3
-#
-# 	# list of movements
-# 	moves::NTuple{9, Tuple{Int64, Int64}}
-# 	# index of the null movement
-# 	i0::Int64
-# 	# list of tuple of symmetric movements
-# 	isym::NTuple{4, Tuple{Int64, Int64}}
-# 	# dictionary with the tuple of orthogonal summetric
-# 	iortho::Dict{Tuple{Int64, Int64}, Tuple{Int64, Int64}}
-#
-# end
-#
-# struct Moves3DV2
-#
-# 	# list of movements
-# 	moves::NTuple{27, Tuple{Int64, Int64, Int64}}
-# 	# index of the null movement
-# 	i0::Int64
-# 	# list of tuple of symmetric movements
-# 	isym::NTuple{13, Tuple{Int64, Int64}}
-# 	# dictionary with the tuple of orthogonal summetric
-# 	iortho::Dict{Tuple{Int64, Int64}, NTuple{8, Int64}}
-#
-# end
+#-----------------
+# Data Types
+#-----------------
 
 # sort-cuts type definitions
 N   = Vararg
@@ -62,8 +19,9 @@ VI  = Vector{Int64}
 VF  = Vector{Float64}
 VN  = Vector{<:Number}
 
-struct Moves
 
+# Helper Data Type to hold one step movements in a 2D or 3D grid
+struct Moves
 	moves  ::Tuple{N{VI}}   # list with the vector of unitary movements in 2D or 3D
 	i0     ::Int64          # index of the null movement (0., 0) or (0, 0, 0)
 	isym   ::Tuple{N{T2I}}  # list of the pair of indices of symmetric movements i.e (1, 0), (-1, 0)
@@ -71,6 +29,57 @@ struct Moves
 	                        # i.e movements (0, 1) (0, -1) are orthogornal to (1, 0), (-1, 0)
 end
 
+# Data from cells (2d pixels or 3d voxels) of Clouds
+struct DataCells
+	coors    ::Tuple{N{VN}}   # (x,y) or (x,y, z) tuple with the cell cordinates
+	contents ::VN             # cell contents
+	cells    ::Vector{TNI}    # Vector with the cell indices, (i, j) or (i, j, k)
+	grad     ::VN             # cell gradient
+	igrad    ::VI             # cell index of the gradient move
+	lap      ::VN             # cell laplacian
+	curmax   ::VN             # cell maximum curvature
+	icurmax  ::VI             # cell index of the move with the maximum curvature
+	curmin   ::VN             # cell minimum curvature
+	icurmin  ::VI             # cell index of the move with the minimum curvature
+	node     ::VI             # node index which this cell belongs to
+	cloud    ::VI             # cloud index which this cell belongs to
+	nborders ::VI             # number of border cells whose belong to another node
+end
+
+# Data of Nodes (the elements of clouds, also the vertices of the graph)
+struct DataNodes
+	size        ::VI             # node size (number of cells into this node)
+	contents    ::VN             # node contents (sum of the cells contents of this node)
+	maxcontent  ::VN             # node maximum content (content of the cell with the maximum content)
+	maxgrad     ::VN             # node maximum gradient
+	maxlap      ::VN             # node maximum laplacian
+	minlap      ::VN             # node minimum laplacian
+	curmax      ::VN             # node maximum curvature
+	curmin      ::VN             # node minimum curvature
+	nedges      ::VI             # number of nodes connected to this node
+	cloud       ::VI             # cloud index which this node belongs to
+	coors       ::Tuple{N{VN}}   # coordenates of the node barycenter
+	coors_std   ::Tuple{N{VN}}   # std of the node coordinates
+	coors_cell  ::Tuple{N{VN}}   # coordenates of the cell with null gradient (top of the node)
+	ecc         ::VI             # distance in nodes of this node to the end of the graph (eccenticity)
+end
+
+
+
+#----------
+# Moves
+#----------
+
+"""
+Function that returns a Moves Data Type. Moves holds the one step moves in a 2D or 3D grid.
+It serves as a help data type for Clouds
+
+Parameters:
+	ndim: int, 2 or 3
+Returns:
+	Moves: DataType with the movemeents
+
+"""
 function moves(ndim::Int64)
 	moves = ndim == 2 ? Tuple([i, j] for i in -1:1:1 for j in -1:1:1) :
 	     Tuple([i, j, k] for i in -1:1:1 for j in -1:1:1 for k in -1:1:1)
@@ -93,60 +102,31 @@ end
 # Clouds
 #-----
 
-
-struct DataCells
-	coors    ::Tuple{N{VN}}   # (x,y) or (x,y, z) tuple with the cell cordinates
-	contents ::VN             # cell contents
-	cells    ::Vector{TNI}    # Vector with the cell indices, (i, j) or (i, j, k)
-	grad     ::VN             # cell gradient
-	igrad    ::VI             # cell index of the gradient move
-	lap      ::VN             # cell laplacian
-	curmax   ::VN             # cell maximum curvature
-	icurmax  ::VI             # cell index of the move with the maximum curvature
-	curmin   ::VN             # cell minimum curvature
-	icurmin  ::VI             # cell index of the move with the minimum curvature
-	node     ::VI             # node index which this cell belongs to
-	cloud    ::VI             # cloud index which this cell belongs to
-	nborders ::VI             # number of border cells whose belong to another node
-end
-
-struct DataNodes
-
-	size        ::VI             # node size (number of cells into this node)
-	contents    ::VN             # node contents (sum of the cells contents of this node)
-	maxcontent  ::VN             # node maximum content (content of the cell with the maximum content)
-	maxgrad     ::VN             # node maximum gradient
-	maxlap      ::VN             # node maximum laplacian
-	minlap      ::VN             # node minimum laplacian
-	curmax      ::VN             # node maximum curvature
-	curmin      ::VN             # node minimum curvature
-	nedges      ::VI             # number of nodes connected to this node
-	cloud       ::VI             # cloud index which this node belongs to
-	coors       ::Tuple{N{VN}}   # coordenates of the node barycenter
-	coors_std   ::Tuple{N{VN}}   # std of the node coordinates
-	coors_cell  ::Tuple{N{VN}}   # coordenates of the cell with null gradient (top of the node)
-	ecc         ::VI             # distance in nodes of this node to the end of the graph (eccenticity)
-end
-
 """
 
-Create Clouds
+Clouds Main Function
 
-From a (x, y) or (x, y, z) tuples of points associated to contents.
+From a collection of points (coors) with energy. The Clouds algorithm creates a
+pixel or voxelixed space where it compute the local gradient, laplacian of each
+pixel or voxel (called cells).
+Nodes based on each cell or the cell connected by the gradient
+are used to define a graph. Extra information of the nodes is also provided.
 
-The space is binned with *step* dimensiones and a histogram is created with the contents.
+Parameters:
+	coors : Tuple with the vector of the coordinates of the points
+	energy: Vector with the values of the contents or energy in each point
+	steps : Tuple with the size of the pizel/voxels in each coordinate
+	threshold: minimum value of the contents to be create a cell, default = 0.
+	cellnode : create a node for each cell (true), otherwise create a node from
+		the cells which are connected via the gradient
 
-Only bins with contents > threshold are considered valid cells.
-
-For each cell several information is provided:
-
-contents, gradient, laplacian, minimum and maximum curvature, node number,
-and number of neighbour cells belonging to another node, and graph id
-
-Other information:
-
-  * A list, graphs, graph_nodes, with the list of nodes in each graph
-  * A dictionary, nodes_edges, with the edes between the nodes.
+Returns:
+	DataCells: DataType with information of the cells, include the coordinates,
+				contents, the gradient, laplacian, etc...
+	DataNodes: DataType with the information of the nodes, include coordinates,
+				content, max and min laplacian, etc..
+	Graph    : GraphType from Graphs containing the graph of the cloud
+	edges    : Tuple with the ranges in the different coordinates
 
 """
 function clouds(coors     ::Tuple{N{VN}},  # Tuple with the point coordinates
@@ -160,12 +140,24 @@ function clouds(coors     ::Tuple{N{VN}},  # Tuple with the point coordinates
     ndim  = length(coors)
     nsize = length(coors[1])
 
+	if (ndim < 2) || (ndim > 3)
+		throw(ArgumentError("only 2 or 3 coordinates allowed"))
+	end
+
     # assert dimensions
     for i in 2:ndim
-        @assert(length(coors[i]) == nsize)
+		if (length(coors[i]) != nsize)
+			throw(ArgumentError("length of all coordinates must be equal"))
+		end
     end
-    @assert(length(energy) == nsize)
-    @assert(length(steps)  == ndim)
+
+    if (length(energy) != nsize)
+		throw(ArgumentError("length of the energy must be equal to the coordinates"))
+	end
+
+	if (length(steps) != ndim)
+		throw(ArgumentError("dimension of steps and coordinates must be equal"))
+	end
 
     # define the extended edges
     edges = Tuple(minimum(x) - 1.5*step : step : maximum(x) + 1.5*step for (x, step) in zip(coors, steps))
@@ -181,7 +173,6 @@ function clouds(coors     ::Tuple{N{VN}},  # Tuple with the point coordinates
 	cells    = findall(x -> x .> threshold, contents)
 	coors_cells  = _xcoors(cells, edges)
 	ucoors_cells = reduce(hcat, coors_cells)
-
 
     # deltas
     deltas = _deltas(ucoors, energy, edges, steps, mm, threshold)
@@ -210,24 +201,14 @@ function clouds(coors     ::Tuple{N{VN}},  # Tuple with the point coordinates
                 curmax[cells], icurmax[cells], curmin[cells], icurmin[cells],
 			    xnodes, xcloudid, xborders[cells])
 
-			#    # cells data
-		   	# dfcells = DataCells(coors = coors_cells, contents = contents[cells],
-		   	# 		   cells = Tuple.(cells),
-		    #               grad = grad[cells], igrad = igrad[cells],
-		    #               lap = lap[cells], #curves = curves,
-		    #               curmax = curmax[cells], icurmax = icurmax[cells],
-		    #               curmin = curmin[cells], icurmin = icurmin[cells],
-		   	# 		   node   = xnodes, cloud = xcloudid,
-		    #               nborders = xborders[cells])
-
-
-
 	# node data
 	dfn = _dfnodes(dfcells, xnodes_edges, cellnode = cellnode)
 
 	# create graph
 	graph, ecc = _graph(xnodes_edges)
 	dfn     = merge(dfn, (ecc = ecc,))
+
+	# create DataNodes
 	dfnodes = DataNodes(dfn.size, dfn.contents, dfn.maxcontent,
 			dfn.maxgrad, dfn.maxlap, dfn.minlap, dfn.curmax, dfn.curmin,
 			dfn.nedges, dfn.cloud, dfn.coors, dfn.coors_std, dfn.coors_cell,
@@ -239,11 +220,11 @@ end
 
 
 #-----------------------------
-# Nodes and graph data
+# Nodes
 #-----------------------------
 
-
 function _dfnodes(xcl, nodes_edges; cellnode = false)
+	# create extra information of the nodes
 	nnodes   = maximum(xcl.node)
 	nsize    = [sum(xcl.node .== inode) for inode in 1:nnodes]
 	contents = [sum(xcl.contents[xcl.node .== inode]) for inode in 1:nnodes]
@@ -281,8 +262,12 @@ function _dfnodes(xcl, nodes_edges; cellnode = false)
 	return df
 end
 
-function _graph(nodes_edges)
+#-----------------------------
+# Graph
+#-----------------------------
 
+function _graph(nodes_edges)
+	# grates the graph
 	nnodes = length(keys(nodes_edges))
 	graphs = []
 	g = GG.Graph(nnodes)
