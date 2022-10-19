@@ -12,7 +12,7 @@ TNN = Tuple{N{<:Number}}
 VI  = Vector{Int64}
 VF  = Vector{Float64}
 VN  = Vector{<:Number}
-AN  = Array{<:Number}
+AN  = T where T <: Array{<:Number}
 AI  = Array{<:Int64}
 
 """
@@ -122,7 +122,7 @@ function box3d(vals::VN = [1, 2, 3, 4])
 end
 
 
-function box_to_coors(aa)
+function box_to_coors(aa::AN)
     ndim = length(size(aa))
     steps = Tuple(ones(ndim))
     cells = CartesianIndices(aa)

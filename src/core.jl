@@ -19,8 +19,9 @@ TNN = Tuple{N{<:Number}}
 VI  = Vector{Int64}
 VF  = Vector{Float64}
 VN  = Vector{<:Number}
-AN  = Array{<:Number}
-AI  = Array{<:Int64}
+VAN = Vector{T} where T <: Array{<:Number}
+AN  = T where T <: Array{<:Number}
+AI  = T where T <: Array{Int64}
 
 
 # Helper Data Type to hold one step movements in a 2D or 3D grid
@@ -191,7 +192,7 @@ function clouds(coors     ::Tuple{N{VN}},  # Tuple with the point coordinates
     curmax, icurmax, curmin, icurmin = _maxmin_curvatures(Base.size(lap), curves, mm)
 
 	# nodes
-    xnodes  = cellnode ?  (1:length(cells)) : _nodes(igrad, cells, mm)
+    xnodes  = cellnode ?  Vector{Int64}(1:length(cells)) : _nodes(igrad, cells, mm)
     xborders, xneigh = _neighbour_node(ucoors_cells, xnodes, edges, steps, mm)
 
 	xnodes_edges  = _nodes_edges(xnodes, xneigh)
@@ -226,7 +227,7 @@ end
 # Nodes
 #-----------------------------
 
-function _dfnodes(xcl, nodes_edges; cellnode = false)
+function _dfnodes(xcl, nodes_edges; cellnode::Bool = false)
 	# create extra information of the nodes
 	nnodes   = maximum(xcl.node)
 	nsize    = [sum(xcl.node .== inode) for inode in 1:nnodes]
@@ -365,7 +366,7 @@ function _deltas(ucoors,
     return deltas
 end
 
-function _gradient(deltas,
+function _gradient(deltas ::VAN,
 	 			   m      ::Moves)
     dims   = Base.size(deltas[m.i0])
     d0     = deltas[m.i0]
@@ -380,7 +381,7 @@ function _gradient(deltas,
 end
 
 
-function _curvatures(deltas,
+function _curvatures(deltas ::VAN,
 	                 m      ::Moves)
 
     curvs = Dict{Int64, AN}()
@@ -391,7 +392,9 @@ function _curvatures(deltas,
     return curvs
 end
 
-function _maxmin_curvatures(nsize, curves, m::Moves)
+function _maxmin_curvatures(nsize   ::TNI,
+	 		                curves  ::Dict{Int64, AN},
+							m       ::Moves)
     curmin  =  1e6 .* ones(nsize...)
     icurmin = m.i0 .* ones(Int, nsize...)
     curmax  = -1e6 .* ones(nsize...)
@@ -409,7 +412,9 @@ function _maxmin_curvatures(nsize, curves, m::Moves)
     return curmax, icurmax, curmin, icurmin
 end
 
-function _node(cell, igrad, m::Moves)
+function _node(cell,
+	           igrad  ::AI,
+			   m      ::Moves)
     imove = igrad[cell]
     if (imove == m.i0)
         return cell
@@ -420,7 +425,9 @@ function _node(cell, igrad, m::Moves)
     end
 end
 
-function _nodes(igrad, cells, m::Moves)
+function _nodes(igrad   :: AI,
+	 	        cells,
+				m       ::Moves)
 
 	cnodes  = [_node(cell, igrad, m) for cell in cells]
 	ucnodes = unique(cnodes)
@@ -433,7 +440,11 @@ function _nodes(igrad, cells, m::Moves)
 end
 
 
-function _neighbour_node(ucoors, nodes, edges, steps::TNN, m::Moves)
+function _neighbour_node(ucoors,
+	                     nodes  ::VI,
+						 edges,
+						 steps  ::TNN,
+						 m      ::Moves)
 
     his = [SB.fit(SB.Histogram, _hcoors(ucoors, steps .* move),
 		SB.weights(nodes), edges) for move in m.moves]
@@ -447,7 +458,8 @@ function _neighbour_node(ucoors, nodes, edges, steps::TNN, m::Moves)
 end
 
 
-function _nodes_edges(nodes, neighs)
+function _nodes_edges(nodes  ::VI,
+	 				  neighs ::VAN)
 
 	#TODO Is this correct?
 	imove0 = length(neighs) > 9 ? 14 : 5
@@ -470,7 +482,7 @@ function _nodes_edges(nodes, neighs)
 	return dus
 end
 
-function _cloud_nodes(nodes_edges)
+function _cloud_nodes(nodes_edges ::Dict{Int64, VI})
 	# TODO: clean this ugly function!
 	used   = []
 	function _add(graph, inode)
@@ -498,7 +510,8 @@ function _cloud_nodes(nodes_edges)
 	return graphs
 end
 
-function _cloudid(xnodes, xclouds_nodes)
+function _cloudid(xnodes        ::VI,
+	              xclouds_nodes ::Dict{Int, VI})
 
 	graphid = zeros(Int64, length(xnodes))
 	for i in keys(xclouds_nodes)
