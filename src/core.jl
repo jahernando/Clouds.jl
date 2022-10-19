@@ -15,12 +15,16 @@ N   = Vararg
 T2I = Tuple{Int64, Int64}
 TNI = Tuple{N{Int64}}
 TNV = Tuple{N{Float64}}
+TNN = Tuple{N{<:Number}}
 VI  = Vector{Int64}
 VF  = Vector{Float64}
 VN  = Vector{<:Number}
+AN  = Array{<:Number}
+AI  = Array{<:Int64}
 
 
 # Helper Data Type to hold one step movements in a 2D or 3D grid
+# one steps 1D movements are : [1, 0], [0, 1], [1, 1], [-1, 0], ...
 struct Moves
 	moves  ::Tuple{N{VI}}   # list with the vector of unitary movements in 2D or 3D
 	i0     ::Int64          # index of the null movement (0., 0) or (0, 0, 0)
@@ -81,18 +85,32 @@ Returns:
 
 """
 function moves(ndim::Int64)
+
+	if (ndim < 1) || (ndim > 3)
+		throw(ArgumentError("moves dimensions valid are 2, 3"))
+	end
+
+	# moves
 	moves = ndim == 2 ? Tuple([i, j] for i in -1:1:1 for j in -1:1:1) :
 	     Tuple([i, j, k] for i in -1:1:1 for j in -1:1:1 for k in -1:1:1)
+
+	# null move
 	move0 = ndim == 2 ? [0, 0] : [0, 0, 0]
 	kmove0 = [i for (i, move) in enumerate(moves) if (move == move0)][1]
+
+	# pair of indices of symmetric moves
 	smoves = Tuple((i, j) for (i, movei) in enumerate(moves)
 	          for (j, movej) in enumerate(moves)
 		      if (movei == -1 .* movej ) &  (i > j))
+
+	#list of orthogonal indeces of moves orthogonal to a pair os symmetric indices of moves
 	omoves = Dict{T2I, VI}()
 	for ii in smoves
 		movei = moves[ii[1]]
-		omoves[ii] = [j for (j, movej) in enumerate(moves) if ((sum(movej .* movei) == 0.0) & (sum(movej .* movej) != 0.0))]
+		omoves[ii] = [j for (j, movej) in enumerate(moves)
+		    if ((sum(movej .* movei) == 0.0) & (sum(movej .* movej) != 0.0))]
 	end
+
 	#return (moves = moves, i0 = kmove0, isym = smoves, iortho = omoves)
 	return Moves(moves, kmove0, smoves, omoves)
 end
@@ -106,11 +124,12 @@ end
 
 Clouds Main Function
 
-From a collection of points (coors) with energy. The Clouds algorithm creates a
+From a collection of points (coors) with energy, the Clouds algorithm creates a
 pixel or voxelixed space where it compute the local gradient, laplacian of each
-pixel or voxel (called cells).
-Nodes based on each cell or the cell connected by the gradient
-are used to define a graph. Extra information of the nodes is also provided.
+pixel or voxel (called cells) and collect cells into nodes. Nodes can be created
+either by each individual cell or collecting the cells whose gradient ends in
+the highest energy cell of the node. Extra information of the nodes is also provided.
+Adjacent nodes are considered connected and a single Graph is constructed
 
 Parameters:
 	coors : Tuple with the vector of the coordinates of the points
@@ -131,7 +150,7 @@ Returns:
 """
 function clouds(coors     ::Tuple{N{VN}},  # Tuple with the point coordinates
 	 	        energy    ::VN,            # energy or content of the point coordinates
-				steps     ::TNV;           # Tuple with the step size in each coordinate
+				steps     ::TNN;           # Tuple with the step size in each coordinate
 				threshold ::Float64 = 0.0, # energy threshold, default = 0.
 				cellnode  ::Bool = false)  # if cellnode == true create a node for each cell
 						                   # otherwise the node is composed by the cells whose gradient ends
@@ -140,24 +159,8 @@ function clouds(coors     ::Tuple{N{VN}},  # Tuple with the point coordinates
     ndim  = length(coors)
     nsize = length(coors[1])
 
-	if (ndim < 2) || (ndim > 3)
-		throw(ArgumentError("only 2 or 3 coordinates allowed"))
-	end
-
-    # assert dimensions
-    for i in 2:ndim
-		if (length(coors[i]) != nsize)
-			throw(ArgumentError("length of all coordinates must be equal"))
-		end
-    end
-
-    if (length(energy) != nsize)
-		throw(ArgumentError("length of the energy must be equal to the coordinates"))
-	end
-
-	if (length(steps) != ndim)
-		throw(ArgumentError("dimension of steps and coordinates must be equal"))
-	end
+	# assert inputs
+	_assert(coors, energy, steps)
 
     # define the extended edges
     edges = Tuple(minimum(x) - 1.5*step : step : maximum(x) + 1.5*step for (x, step) in zip(coors, steps))
@@ -303,8 +306,46 @@ function _hcoors(ucoors, move)
 	return zt
 end
 
+function _assert(coors::Tuple{N{VN}},
+				 energy::VN,
+				 steps::TNN)
+	# asset inputs of clouds
 
-function _deltas(ucoors, energy, edges, steps, m, threshold)
+	ndim  = length(coors)
+	nsize = length(coors[1])
+
+	# assert inputs
+	if (ndim < 2) || (ndim > 3)
+		throw(ArgumentError("clouds, only 2 or 3 coordinates allowed"))
+	end
+
+	for i in 2:ndim
+		if (length(coors[i]) != nsize)
+			throw(ArgumentError("clouds, length of all coordinates must be equal"))
+		end
+	end
+
+	if (length(energy) != nsize)
+		throw(ArgumentError("clouds, length of the energy must be equal to the coordinates"))
+	end
+
+	if (length(steps) != ndim)
+		throw(ArgumentError("clouds, dimension of steps and coordinates must be equal"))
+	end
+
+	if (all([step > 0 for step in steps]) != true)
+		throw(ArgumentError("clouds, steps in each coordinate must be greather than 0"))
+	end
+
+end
+
+function _deltas(ucoors,
+	             energy::VN,
+				 edges,
+				 steps::TNN,
+				 m::Moves,
+				 threshold::Float64)
+	# Compute deltas in each of the moves
 
     his = [SB.fit(SB.Histogram, _hcoors(ucoors, steps .* move),
 		SB.weights(energy), edges) for move in m.moves]
@@ -324,7 +365,8 @@ function _deltas(ucoors, energy, edges, steps, m, threshold)
     return deltas
 end
 
-function _gradient(deltas, m)
+function _gradient(deltas,
+	 			   m      ::Moves)
     dims   = Base.size(deltas[m.i0])
     d0     = deltas[m.i0]
     grad   = deepcopy(d0)
@@ -338,9 +380,10 @@ function _gradient(deltas, m)
 end
 
 
-function _curvatures(deltas, m)
+function _curvatures(deltas,
+	                 m      ::Moves)
 
-    curvs = Dict()
+    curvs = Dict{Int64, AN}()
     for smove in m.isym
        #curvs[smove[1]] = reduce(.+, [deltas[kmove] for kmove in m.iortho[smove]])
 	   curvs[smove[1]] = reduce(.+, [deltas[kmove] for kmove in smove])
@@ -348,7 +391,7 @@ function _curvatures(deltas, m)
     return curvs
 end
 
-function _maxmin_curvatures(nsize, curves, m)
+function _maxmin_curvatures(nsize, curves, m::Moves)
     curmin  =  1e6 .* ones(nsize...)
     icurmin = m.i0 .* ones(Int, nsize...)
     curmax  = -1e6 .* ones(nsize...)
@@ -366,7 +409,7 @@ function _maxmin_curvatures(nsize, curves, m)
     return curmax, icurmax, curmin, icurmin
 end
 
-function _node(cell, igrad, m)
+function _node(cell, igrad, m::Moves)
     imove = igrad[cell]
     if (imove == m.i0)
         return cell
@@ -377,7 +420,7 @@ function _node(cell, igrad, m)
     end
 end
 
-function _nodes(igrad, cells, m)
+function _nodes(igrad, cells, m::Moves)
 
 	cnodes  = [_node(cell, igrad, m) for cell in cells]
 	ucnodes = unique(cnodes)
@@ -390,7 +433,7 @@ function _nodes(igrad, cells, m)
 end
 
 
-function _neighbour_node(ucoors, nodes, edges, steps, m)
+function _neighbour_node(ucoors, nodes, edges, steps::TNN, m::Moves)
 
     his = [SB.fit(SB.Histogram, _hcoors(ucoors, steps .* move),
 		SB.weights(nodes), edges) for move in m.moves]
@@ -406,6 +449,7 @@ end
 
 function _nodes_edges(nodes, neighs)
 
+	#TODO Is this correct?
 	imove0 = length(neighs) > 9 ? 14 : 5
 
 	dus     = Dict{Int64, Array{Int64, 1}}()
@@ -439,7 +483,7 @@ function _cloud_nodes(nodes_edges)
 			end
 		end
 	end
-	graphs = Dict()
+	graphs = Dict{Int64, VI}()
 	i = 0
 	for inode in keys(nodes_edges)
 		if inode in used

@@ -192,6 +192,8 @@ end
 		@test _catch(ncoors, contents, steps) == true
 		ncoors = (coors[1], coors[2], coors[2])
 		@test _catch(ncoors, contents, steps) == true
+		nsteps = (-1., 0.)
+		@test _catch(coors, contents, nsteps) == true
 	end
 
 	@testset "nodes" begin
