@@ -76,14 +76,19 @@ end
 #----------
 
 """
-Function that returns a Moves Data Type. Moves holds the one step moves in a 2D or 3D grid.
-It serves as a help data type for Clouds
+	moves(ndim)
 
-Parameters:
-	ndim: int, 2 or 3
-Returns:
-	Moves: DataType with the movemeents
+Returns a `Moves` DataType for 2 or 3 dimentions.
 
+`Moves` holds data for the one step movements in one unit in any coordinate.
+
+# Examples
+
+```julia-repr
+julia> mm = Moves(2)
+julia> mm.moves
+([-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 0], [0, 1], [1, -1], [1, 0], [1, 1])
+```
 """
 function moves(ndim::Int64)
 
@@ -122,31 +127,60 @@ end
 #-----
 
 """
+	clouds(coors, energy, steps; cellmode = 1, threshold = 0.)
 
-Clouds Main Function
+From a collection of points (`coors`) with weights (`energy`),
+the Clouds algorithm creates a pixel or voxelixed space.
+Every pixel or voxel is called a *cell*.
+The energy (content) on every cell is compute. Only cells above a threshold
+are considered. For every cell the algoritm computes the local gradient, laplacian,
+the maximum and minimum curvature.
 
-From a collection of points (coors) with energy, the Clouds algorithm creates a
-pixel or voxelixed space where it compute the local gradient, laplacian of each
-pixel or voxel (called cells) and collect cells into nodes. Nodes can be created
-either by each individual cell or collecting the cells whose gradient ends in
-the highest energy cell of the node. Extra information of the nodes is also provided.
-Adjacent nodes are considered connected and a single Graph is constructed
+Cells are grouped into nodes. A *node* can be constructed from one cell if `cellnode = true`,
+otherwise cells whose gradient ends in the same cell (which is the cell with
+the highest contents or energy) are grouped into a node. The maximum gradient,
+laplaciant, curvarure, coordiantes and other information are computed for each node.
+
+Nodes which share adjacent cells are connected. With the list of Nodes and their
+connections is created a *graph*.
 
 Parameters:
-	coors : Tuple with the vector of the coordinates of the points
-	energy: Vector with the values of the contents or energy in each point
-	steps : Tuple with the size of the pizel/voxels in each coordinate
-	threshold: minimum value of the contents to be create a cell, default = 0.
-	cellnode : create a node for each cell (true), otherwise create a node from
+
+	`coors     :: Tuple{N{Vector{Number}}}` Tuple with the vector of the coordinates of the points
+
+	`energy    :: Vector{Number}` Vector with the values of the contents or energy in each point
+
+	`steps     :: Tuple{N{Number}}`` tuple the size of the pizel/voxels in each coordinate
+
+	`threshold :: float = 0.0` minimum value of the contents to be create a cell, default = 0.
+
+	`cellnode  :: Bool = false` create a node for each cell (true), otherwise create a node from
 		the cells which are connected via the gradient
 
 Returns:
-	DataCells: DataType with information of the cells, include the coordinates,
+
+	`DataCells`: DataType with information of the cells, include the coordinates,
 				contents, the gradient, laplacian, etc...
-	DataNodes: DataType with the information of the nodes, include coordinates,
+
+	`DataNodes`: DataType with the information of the nodes, include coordinates,
 				content, max and min laplacian, etc..
-	Graph    : GraphType from Graphs containing the graph of the cloud
-	edges    : Tuple with the ranges in the different coordinates
+
+	`Graph`    : GraphType from Graphs containing the graph of the cloud
+
+	`edges`    : Tuple with the ranges of the different coordinates
+
+# Examples
+
+```julia-repr
+julia > coors  = ([1, 2, 3, 1, 2, 3, 1, 2, 3], [1, 1, 1, 2, 2, 2, 3, 3, 3])
+julia > energy = [1, 2, 1, 2, 4, 2, 1, 2, 1]
+julia > steps  = (1.0, 1.0))
+julia > datacells, datanodes, graph, edges = clouds(coors, energy, steps)
+julia > Tuple(datacells.grad)
+(2.1213203435596424, 2.0, 2.1213203435596424, 2.0, 0.0, 2.0, 2.1213203435596424, 2.0, 2.1213203435596424)
+julia > Tuple(datacells.lap)
+(4.121320343559642, 0.0, 4.121320343559642, 0.0, -16.485281374238568, 0.0, 4.121320343559642, 0.0, 4.121320343559642)
+```
 
 """
 function clouds(coors     ::Tuple{N{VN}},  # Tuple with the point coordinates
@@ -164,7 +198,8 @@ function clouds(coors     ::Tuple{N{VN}},  # Tuple with the point coordinates
 	_assert(coors, energy, steps)
 
     # define the extended edges
-    edges = Tuple(minimum(x) - 1.5*step : step : maximum(x) + 1.5*step for (x, step) in zip(coors, steps))
+    edges = (minimum(x) - 1.5*step : step : maximum(x) + 1.5*step for (x, step) in zip(coors, steps))
+	edges = Tuple(Vector(ei) for ei in edges)
 
     # alias
 	mm  = moves(ndim)
@@ -227,8 +262,11 @@ end
 # Nodes
 #-----------------------------
 
-function _dfnodes(xcl, nodes_edges; cellnode::Bool = false)
+function _dfnodes(xcl           ::DataCells,
+	 			 nodes_edges    ::Dict{Int64, VI};
+	 			 cellnode       ::Bool = false)
 	# create extra information of the nodes
+
 	nnodes   = maximum(xcl.node)
 	nsize    = [sum(xcl.node .== inode) for inode in 1:nnodes]
 	contents = [sum(xcl.contents[xcl.node .== inode]) for inode in 1:nnodes]
@@ -240,8 +278,6 @@ function _dfnodes(xcl, nodes_edges; cellnode::Bool = false)
 	curmin   = [minimum(xcl.curmin[xcl.node .== inode])  for inode in 1:nnodes]
 	cloudid  = [maximum(xcl.cloud[xcl.node .== inode])   for inode in 1:nnodes]
 	nedges   = [length(nodes_edges[inode]) for inode in 1:nnodes]
-
-	#weights  = _w(xcl)
 
 	function _stats(coor, inode)
 		sel   = xcl.node .== inode
@@ -270,8 +306,8 @@ end
 # Graph
 #-----------------------------
 
-function _graph(nodes_edges)
-	# grates the graph
+function _graph(nodes_edges ::Dict{Int64, VI})
+	# create the graph of the Cloud
 	nnodes = length(keys(nodes_edges))
 	graphs = []
 	g = GG.Graph(nnodes)
@@ -291,8 +327,8 @@ end
 #  Clouds internal functions
 #-----------------------------
 
-
-function _xcoors(cells, edges)
+function _xcoors(cells  ::Vector{<:CartesianIndex},
+	 			 edges  ::Tuple{N{VF}})
 	ndim    = length(edges)
 	centers = [(ex[2:end] + ex[1:end-1])/2.0 for ex in edges]
 	indices = [getindex.(cells, i) for i in 1:ndim]
@@ -300,16 +336,17 @@ function _xcoors(cells, edges)
 	return coors
 end
 
-function _hcoors(ucoors, move)
+function _hcoors(ucoors  ::T where T <: Array{<:Number},
+			     move    ::VN)
 	ndim = length(move)
 	z    = ucoors .- move'
 	zt   = Tuple(z[:, i] for i in 1:ndim)
 	return zt
 end
 
-function _assert(coors::Tuple{N{VN}},
-				 energy::VN,
-				 steps::TNN)
+function _assert(coors   ::Tuple{N{VN}},
+				 energy  ::VN,
+				 steps   ::TNN)
 	# asset inputs of clouds
 
 	ndim  = length(coors)
@@ -340,12 +377,12 @@ function _assert(coors::Tuple{N{VN}},
 
 end
 
-function _deltas(ucoors,
-	             energy::VN,
-				 edges,
-				 steps::TNN,
-				 m::Moves,
-				 threshold::Float64)
+function _deltas(ucoors     ::T where T <: Array{<:Number},
+	             energy     ::VN,
+				 edges      ::Tuple{N{VN}},
+				 steps      ::TNN,
+				 m          ::Moves,
+				 threshold  ::Float64)
 	# Compute deltas in each of the moves
 
     his = [SB.fit(SB.Histogram, _hcoors(ucoors, steps .* move),
@@ -368,6 +405,7 @@ end
 
 function _gradient(deltas ::VAN,
 	 			   m      ::Moves)
+	# compute the gradiend from the deltas in each move
     dims   = Base.size(deltas[m.i0])
     d0     = deltas[m.i0]
     grad   = deepcopy(d0)
@@ -383,6 +421,7 @@ end
 
 function _curvatures(deltas ::VAN,
 	                 m      ::Moves)
+	# compute the curvatures in each direction from the deltas
 
     curvs = Dict{Int64, AN}()
     for smove in m.isym
@@ -395,6 +434,7 @@ end
 function _maxmin_curvatures(nsize   ::TNI,
 	 		                curves  ::Dict{Int64, AN},
 							m       ::Moves)
+	# compute the min, max, curvature from the curvatures grouped in a dictionary
     curmin  =  1e6 .* ones(nsize...)
     icurmin = m.i0 .* ones(Int, nsize...)
     curmax  = -1e6 .* ones(nsize...)
@@ -412,9 +452,10 @@ function _maxmin_curvatures(nsize   ::TNI,
     return curmax, icurmax, curmin, icurmin
 end
 
-function _node(cell,
+function _node(cell   ::CartesianIndex,
 	           igrad  ::AI,
 			   m      ::Moves)
+	# assing a node to a cell following the gradient
     imove = igrad[cell]
     if (imove == m.i0)
         return cell
@@ -425,9 +466,10 @@ function _node(cell,
     end
 end
 
-function _nodes(igrad   :: AI,
-	 	        cells,
+function _nodes(igrad   ::AI,
+	 	        cells   ::Vector{<:CartesianIndex},
 				m       ::Moves)
+	# compute the nodes to which the cells belong to
 
 	cnodes  = [_node(cell, igrad, m) for cell in cells]
 	ucnodes = unique(cnodes)
@@ -440,11 +482,12 @@ function _nodes(igrad   :: AI,
 end
 
 
-function _neighbour_node(ucoors,
+function _neighbour_node(ucoors ::T where T <: Array{<:Number},
 	                     nodes  ::VI,
-						 edges,
+						 edges  ::Tuple{N{VN}},
 						 steps  ::TNN,
 						 m      ::Moves)
+	# compute the borders and neighbour cells
 
     his = [SB.fit(SB.Histogram, _hcoors(ucoors, steps .* move),
 		SB.weights(nodes), edges) for move in m.moves]
@@ -460,6 +503,8 @@ end
 
 function _nodes_edges(nodes  ::VI,
 	 				  neighs ::VAN)
+	# compute the dictionary that associates to a node the list of nodes
+	# which are connected via adjacent cells
 
 	#TODO Is this correct?
 	imove0 = length(neighs) > 9 ? 14 : 5
@@ -483,6 +528,7 @@ function _nodes_edges(nodes  ::VI,
 end
 
 function _cloud_nodes(nodes_edges ::Dict{Int64, VI})
+	# associate nodes to cloud indices
 	# TODO: clean this ugly function!
 	used   = []
 	function _add(graph, inode)
@@ -512,6 +558,7 @@ end
 
 function _cloudid(xnodes        ::VI,
 	              xclouds_nodes ::Dict{Int, VI})
+	# associated to the nodes a cloud id
 
 	graphid = zeros(Int64, length(xnodes))
 	for i in keys(xclouds_nodes)

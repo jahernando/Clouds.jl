@@ -16,18 +16,41 @@ AN  = T where T <: Array{<:Number}
 AI  = Array{<:Int64}
 
 """
-returns a (3, 3) 2D matrix:
+	box2d([a = 1, b = 2, c = 4])
 
-  A = [a b a; b c b; a b c]
+where `a < b < c`
 
-requires  a < b < c
+returns list of (3, 3) 2D matrices into a numed-tuple.
+
+The main one A, is the `contents`
+
+`A = [a b a; b c b; a b c]`
+
+Other matrices the local gradient, laplacian, etc are in the named-tuple
+
+# Examples
+
+```julia-repr
+julia> box = box2d([1, 2, 4])
+julia> box.contents
+3×3 Matrix{Int64}:
+ 1  2  1
+ 2  4  2
+ 1  2  1
+```
+
+
 """
-function box2d(vals::VN = [1, 2, 4])
+function box2d(vals ::VN = [1, 2, 4])
 
-	@assert length(vals) ==3
+	if length(vals) != 3
+		throw(ArgumentError("box2d: Only [a, b, c] allowed"))
+	end
 
 	a, b, c = vals[1], vals[2], vals[3]
-	@assert (a < b) & (b < c)
+	if (a >= b) || (b >= c)
+		throw(ArgumentError("box2d: [a, b, c] where a < b < c"))
+	end
 
 	cs = [a b a; b c b; a b a]
 
@@ -57,20 +80,56 @@ function box2d(vals::VN = [1, 2, 4])
 
 end
 
-"""
-return a (3, 3, 3) 3D array A:
- 	A[:, :, 1] = [a b a; b c b; a b c]
-	A[:, :, 2] = [b c b; c d c; b c b]
-	A[:, :, 3] = [a b a; b c b; a b a]
 
-requires a < b < c < d
+"""
+	box3d([a = 1, b = 2, c = 3, d = 4])
+
+where `a < b < c < d`
+
+returns a list of (3, 3, 3) 3D matrices into a numed-tuple.
+
+The main one is A the `contents`
+
+A[:, :, 1] = [a b a; b c b; a b c]
+
+A[:, :, 2] = [b c b; c d c; b c b]
+
+A[:, :, 3] = [a b a; b c b; a b a]
+
+Other matrices the local gradient, laplacian, etc are in the named-tuple
+
+# Examples
+
+```julia-repr
+julia > box = box3d([1, 2, 3, 4])
+julia> box.contents
+3×3×3 Array{Float64, 3}:
+[:, :, 1] =
+ 1.0  2.0  1.0
+ 2.0  3.0  2.0
+ 1.0  2.0  1.0
+
+[:, :, 2] =
+ 2.0  3.0  2.0
+ 3.0  4.0  3.0
+ 2.0  3.0  2.0
+
+[:, :, 3] =
+ 1.0  2.0  1.0
+ 2.0  3.0  2.0
+ 1.0  2.0  1.0
+```
 """
 function box3d(vals::VN = [1, 2, 3, 4])
 
-	@assert (length(vals) == 4)
+	if (length(vals) != 4)
+		throw(ArgumentError("box3d: Only [a, b, c, d] vector allowed"))
+	end
 
 	a, b, c, d = vals[1], vals[2], vals[3], vals[4]
-	@assert (a < b) & (b < c) & (c < d)
+	if (a >= b) || (b >= c) || (c >= d)
+		throw(ArgumentError("box2d: Only [a, b, c, d] where a < b < c < d"))
+	end
 
 	bs = zeros(3, 3, 3)
 	bs[:, :, 1] = [a b a; b c b; a b a]
@@ -121,7 +180,37 @@ function box3d(vals::VN = [1, 2, 3, 4])
 
 end
 
+"""
+	box_to_coors(aa::Array)
 
+Convers an array `aa` into the input of the `clouds` function:
+
+Returns
+
+	`coors    ::NTuple{Vector{Number}}`` coordinates of the matrix (i, j) or (i, j, k)
+
+	`contents ::Vector{Number}` contents of the array
+
+	`steps` (1, 1) or (1, 1, 1) depending on the array rank
+
+# Examples
+```
+julia> aa
+3×3 Matrix{Int64}:
+ 1  2  1
+ 2  4  2
+ 1  2  1
+ julia > coors, contents, steps = box_to_coors(aa)
+ julia > coors
+ ([1, 2, 3, 1, 2, 3, 1, 2, 3], [1, 1, 1, 2, 2, 2, 3, 3, 3])
+ julia > contents
+ [1, 2, 1, 2, 4, 2, 1, 2, 1]
+ julia > steps
+ (1.0, 1.0))
+```
+
+
+"""
 function box_to_coors(aa::AN)
     ndim = length(size(aa))
     steps = Tuple(ones(ndim))
@@ -131,12 +220,12 @@ function box_to_coors(aa::AN)
 end
 
 """
-returns 3D or 2D points in a line smeared with a gaussian
+	line(; ndim = 3, threshold = 0.0)
 
-"""
+returns the inputs for clouds of a 3D or 2D points in a line smeared with a gausian
 
-"""
-Just a smeared line!
+returns: `coors`, `contents`, `steps` into a named-tuple
+
 """
 function line(;ndim::Int64 = 3, threshold::Float64 = 0.)
 
