@@ -16,13 +16,15 @@ VAN = Vector{T} where T <: Array{<:Number}
 AN  = T where T <: Array{<:Number}
 AI  = T where T <: Array{Int64}
 
+SGraph = GG.SimpleGraphs.SimpleGraph{Int64}
+
 struct Spine
 
-	spine        #:: Graph
-	eccentricity #:: VI
-	dists        #:: Matrix
-	extremes     #:: Tuple of Int Pairs
-	extremes_maxcontents #::Tuple of Int Pairs
+	spine        :: SGraph
+	eccentricity :: VI
+	dists        :: Matrix{Int}
+	extremes     :: Vector{Tuple{Int64, Int64}}
+	extremes_maxcontents :: Vector{Tuple{Int64, Int64}}
 end
 
 
