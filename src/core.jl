@@ -244,7 +244,11 @@ function clouds(coors     ::Tuple{N{VN}},  # Tuple with the point coordinates
 	dfn = _dfnodes(dfcells, xnodes_edges, cellnode = cellnode)
 
 	# create graph
-	graph, ecc = _graph(xnodes_edges)
+	#graph, ecc = _graph(xnodes_edges)
+	sp  = spine(xnodes_edges, dfn.contents)
+	graph = sp.spine
+	ecc   = sp.eccentricity
+	#print(sp.extremes_maxcontents)
 	dfn     = merge(dfn, (ecc = ecc,))
 
 	# create DataNodes
@@ -318,6 +322,7 @@ function _graph(nodes_edges ::Dict{Int64, VI})
 	end
 
 	ecc = GG.eccentricity(g)
+	ecc[ecc .> nnodes] .= 0
 	return g, ecc
 
 end

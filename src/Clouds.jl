@@ -7,4 +7,7 @@ export moves, clouds
 include("sources.jl")
 export box2d, box3d, line
 
+include("spine.jl")
+export spine
+
 end
