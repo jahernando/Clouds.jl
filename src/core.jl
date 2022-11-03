@@ -165,7 +165,8 @@ Returns:
 	`DataNodes`: DataType with the information of the nodes, include coordinates,
 				content, max and min laplacian, etc..
 
-	`Graph`    : GraphType from Graphs containing the graph of the cloud
+	`Spine`    : DataType with the graph that makes the spine of the cloud,
+				the extremes nodes of the spine and the distance matrix between nodes
 
 	`edges`    : Tuple with the ranges of the different coordinates
 
@@ -175,7 +176,7 @@ Returns:
 julia > coors  = ([1, 2, 3, 1, 2, 3, 1, 2, 3], [1, 1, 1, 2, 2, 2, 3, 3, 3])
 julia > energy = [1, 2, 1, 2, 4, 2, 1, 2, 1]
 julia > steps  = (1.0, 1.0))
-julia > datacells, datanodes, graph, edges = clouds(coors, energy, steps)
+julia > datacells, datanodes, spine, edges = clouds(coors, energy, steps)
 julia > Tuple(datacells.grad)
 (2.1213203435596424, 2.0, 2.1213203435596424, 2.0, 0.0, 2.0, 2.1213203435596424, 2.0, 2.1213203435596424)
 julia > Tuple(datacells.lap)
