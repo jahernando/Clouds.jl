@@ -17,6 +17,7 @@ TNI = Tuple{N{Int64}}
 TNV = Tuple{N{Float64}}
 TNN = Tuple{N{<:Number}}
 VI  = Vector{Int64}
+VB  = Vector{Bool}
 VF  = Vector{Float64}
 VN  = Vector{<:Number}
 VAN = Vector{T} where T <: Array{<:Number}
@@ -67,9 +68,8 @@ struct DataNodes
 	coors_std   ::Tuple{N{VN}}   # std of the node coordinates
 	coors_cell  ::Tuple{N{VN}}   # coordenates of the cell with null gradient (top of the node)
 	ecc         ::VI             # distance in nodes of this node to the end of the graph (eccenticity)
+	extremes    ::VB             # true if the node is the pair extreme of the graph with the largest contents
 end
-
-
 
 #----------
 # Moves
@@ -249,14 +249,19 @@ function clouds(coors     ::Tuple{N{VN}},  # Tuple with the point coordinates
 	sp  = spine(xnodes_edges, dfn.contents)
 	graph = sp.spine
 	ecc   = sp.eccentricity
+	extrs = zeros(Bool, length(ecc))
+	for (i, j) in sp.extremes_maxcontents
+		extrs[i] = true
+		extrs[j] = true
+	end
 	#print(sp.extremes_maxcontents)
-	dfn     = merge(dfn, (ecc = ecc,))
+	dfn     = merge(dfn, (ecc = ecc, extremes = extrs))
 
 	# create DataNodes
 	dfnodes = DataNodes(dfn.size, dfn.contents, dfn.maxcontent,
 			dfn.maxgrad, dfn.maxlap, dfn.minlap, dfn.curmax, dfn.curmin,
 			dfn.nedges, dfn.cloud, dfn.coors, dfn.coors_std, dfn.coors_cell,
-			dfn.ecc)
+			dfn.ecc, dfn.extremes)
 
 	return dfcells, dfnodes, sp, edges
 

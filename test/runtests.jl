@@ -294,10 +294,13 @@ end
 		@test maximum(xspine.dists) == nn-1
 		@test length(xspine.extremes) == 1
 		@test length(xspine.extremes_maxcontents) == 1
+		@test (maximum(xnd.ecc) == nn-1)
 		i1, i2 = xspine.extremes[1]
 		@test (i1 == 1) && (i2 == nn)
 		i1, i2 = xspine.extremes_maxcontents[1]
 		@test (i1 == 1) && (i2 == nn)
+		@test (xnd.extremes[i1]) && (xnd.extremes[i2])
+		@test (sum(xnd.extremes) == 2)
 		b3  = box3d()
 		b3n = repeat(b3.contents, nn)
 		coors, contents, steps = box_to_coors(b3n)
@@ -306,10 +309,13 @@ end
 		@test maximum(xspine.dists) == nn-1
 		@test length(xspine.extremes) == 1
 		@test length(xspine.extremes_maxcontents) == 1
+		@test (maximum(xnd.ecc) == nn-1)
 		i1, i2 = xspine.extremes[1]
 		@test (i1 == 1) && (i2 == nn)
 		i1, i2 = xspine.extremes_maxcontents[1]
 		@test (i1 == 1) && (i2 == nn)
+		@test (xnd.extremes[i1]) && (xnd.extremes[i2])
+		@test (sum(xnd.extremes) == 2)
 	end
 
 end
