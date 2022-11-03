@@ -284,4 +284,28 @@ end
 		@test sum(sum(xnd.coors_std)) == 0.0
 	end
 
+	@testset "spine" begin
+		nn   = sample(2:10)
+		b2   = box2d()
+		b2n  = repeat(b2.contents, nn)
+		coors, contents, steps = box_to_coors(b2n)
+		xcl, xnd, xspine, _ = clouds(coors, contents, steps)
+		@test GG.nv(xspine.spine) == nn
+		@test maximum(xspine.dists) == nn-1
+		@test length(xspine.extremes) == 1
+		@test length(xspine.extremes_maxcontents) == 1
+		i1, i2 = xspine.extremes[1]
+		@test (i1 == 1) && (i2 == nn)
+		b3  = box3d()
+		b3n = repeat(b3.contents, nn)
+		coors, contents, steps = box_to_coors(b3n)
+		xcl, xnd, xspine, _ = clouds(coors, contents, steps)
+		@test GG.nv(xspine.spine) == nn
+		@test maximum(xspine.dists) == nn-1
+		@test length(xspine.extremes) == 1
+		@test length(xspine.extremes_maxcontents) == 1
+		i1, i2 = xspine.extremes[1]
+		@test (i1 == 1) && (i2 == nn)
+	end
+
 end
