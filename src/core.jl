@@ -257,7 +257,7 @@ function clouds(coors     ::Tuple{N{VN}},  # Tuple with the point coordinates
 			dfn.nedges, dfn.cloud, dfn.coors, dfn.coors_std, dfn.coors_cell,
 			dfn.ecc)
 
-	return dfcells, dfnodes, graph, edges
+	return dfcells, dfnodes, sp, edges
 
 end
 

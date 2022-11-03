@@ -204,12 +204,12 @@ end
 		xcl, xnd, xgraph, _ = clouds(coors, contents, steps)
 		@test maximum(xcl.node)    == nn
 		@test length(xnd.contents) == nn
-		@test GG.nv(xgraph)        == nn
+		@test GG.nv(xgraph.spine)  == nn
 		@test maximum(xcl.cloud)   == 1
 		xcl, xnd, xgraph, _ = clouds(coors, contents, steps, cellnode = true)
 		@test maximum(xcl.node)    == length(xcl.node)
 		@test length(xnd.contents) == length(xcl.node)
-		@test GG.nv(xgraph)        == length(xcl.node)
+		@test GG.nv(xgraph.spine)  == length(xcl.node)
 		@test maximum(xcl.cloud)   == 1
 		b3  = box3d()
 		b3n = repeat(b3.contents, nn)
@@ -217,12 +217,12 @@ end
 		xcl, xnd, xgraph, _ = clouds(coors, contents, steps)
 		@test maximum(xcl.node)    == nn
 		@test length(xnd.contents) == nn
-		@test GG.nv(xgraph)        == nn
+		@test GG.nv(xgraph.spine)  == nn
 		@test maximum(xcl.cloud)   == 1
 		xcl, xnd, xgraph, _ = clouds(coors, contents, steps, cellnode = true)
 		@test maximum(xcl.node) == length(xcl.node)
 		@test length(xnd.contents) == length(xcl.node)
-		@test GG.nv(xgraph)        == length(xcl.node)
+		@test GG.nv(xgraph.spine)  == length(xcl.node)
 		@test maximum(xcl.cloud)   == 1
 	end
 
@@ -239,7 +239,7 @@ end
 		m3  = b3.contents
 		b3n = repeat(vcat(m3, 0 .* m3), nn)
 		coors, contents, steps = box_to_coors(b3n)
-		xcl, xnd, xgraph, _ = clouds(coors, contents, steps)
+		xcl, xnd, _, _ = clouds(coors, contents, steps)
 		@test maximum(xcl.node)  == nn
 		@test maximum(xcl.cloud) == nn
 	end
