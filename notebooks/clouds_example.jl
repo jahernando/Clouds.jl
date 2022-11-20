@@ -144,6 +144,7 @@ brange0 = @bind v0 Slider(minv:maxv, default = minv)
 brange1 = @bind v1 Slider(minv:maxv, default = maxv)
 md"""
 Selec range for variable $(label):
+
 minimum $(brange0)
 maximum  $(brange1)
 """
@@ -153,6 +154,11 @@ end
 md"""
 Selected range : [ $(v0), $(v1) ]
 """
+
+# ╔═╡ 3a43086a-eb04-4aca-b344-9781b05e39b9
+begin
+xcl
+end
 
 # ╔═╡ 2814ba8e-58fa-4b68-af7b-b9e6656dcc19
 md"""
@@ -216,16 +222,16 @@ md"""
 # ╔═╡ Cell order:
 # ╟─5dcb2929-115e-459c-b98d-43ae7bcabd3a
 # ╟─a9d9186f-19aa-41d7-8ec6-ad5197a74b8b
-# ╠═a57cdb41-c388-4976-bec8-ec0650fb139c
+# ╟─a57cdb41-c388-4976-bec8-ec0650fb139c
 # ╟─cdc50171-b288-40b6-9d0d-9511901218e0
 # ╟─3922eba2-f322-4b06-b9e0-83bc723d7930
 # ╟─3aedeb39-f255-4fd5-9ac3-29888a129e90
 # ╟─7408b8f3-31f8-4764-bbf1-2bf9b245a8bb
 # ╟─e8848fd9-205e-4b56-b192-62f1acda8d7e
-# ╠═6c8bf138-8fec-4c69-b4dd-4284faddeed0
+# ╟─6c8bf138-8fec-4c69-b4dd-4284faddeed0
 # ╟─1a8e9aa9-a47d-40fd-84c6-cfa49f9b1cc4
 # ╠═d26c89ae-1629-4e98-8bde-3e8abe8bfd8d
-# ╟─5a1832c1-33ff-45dc-8f47-212179dbe862
+# ╠═5a1832c1-33ff-45dc-8f47-212179dbe862
 # ╟─7cc12053-2bb8-4f24-b1a3-81c7fb679e19
 # ╟─f5dbdc6d-6676-4e0c-a70e-a5daafbbd9db
 # ╟─4e43c8e3-89e2-44ca-a6ed-48a364d90486
@@ -235,6 +241,7 @@ md"""
 # ╟─f17d0274-4a61-423c-a76f-870dcef41a60
 # ╟─e7544908-23e0-4e3a-ad93-2af5e0dc11f1
 # ╠═1fab453f-5dab-48bb-87d2-1c92b3f6d7cc
+# ╟─3a43086a-eb04-4aca-b344-9781b05e39b9
 # ╟─2814ba8e-58fa-4b68-af7b-b9e6656dcc19
 # ╟─7b7981ca-1540-48a1-88e1-4f27e7787b70
 # ╟─1c402508-afd3-46a1-8dbc-a23fd9bd63e1
