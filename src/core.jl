@@ -491,7 +491,33 @@ function _nodes(igrad   ::AI,
 	nodes = [dicnodes[Tuple(cnode)] for cnode in cnodes]
 	return nodes
 end
-
+#
+# function _nodes_equal_values(cells, deltas, m)
+# 	ncells    = length(cells)
+# 	xnode     = zeros(Int64, ncells)
+# 	currentid = 0
+# 	for (i, cell) in enumerate(cells)
+# 		if xnode[i] == 0
+# 			currentid += 1
+# 			xnode[i]   = currentid
+# 		nodeid = xnode[i]
+# 		mis    = [i for (i, delta) in enumerate(deltas) if delta[cell] == 0.0]
+# 		if (length(mis) <= 1) continue
+# 		for imove in mis
+# 			if (imove == m.i0)
+# 				continue
+# 			end
+# 			nextcell = Tuple(Tuple(cell) .+ m.moves[imove])
+# 			jindices   = findall(x -> x .== nextcell, cells)
+# 			@assert(length(jindices) == 1, "nodes equal values : only one cell should be accesible")
+# 			jindex = jindices[1]
+# 			if xnode[jindex] == 0
+# 				xnode[jindex] = nodeid
+# 			@asset(xnode[jindex] == nodeid), "nodes equal values : cells should have the same node id")
+# 		end
+# 	end
+# 	return xnode
+# end
 
 function _neighbour_node(ucoors ::T where T <: Array{<:Number},
 	                     nodes  ::VI,

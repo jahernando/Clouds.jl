@@ -4,10 +4,14 @@ module Clouds
 include("core.jl")
 export moves, clouds
 
-include("sources.jl")
-export box2d, box3d, line
+include("clustering.jl")
+export cluster_nodes, clustering
 
 include("spine.jl")
 export spine
+
+include("sources.jl")
+export box2d, box3d, line
+
 
 end
