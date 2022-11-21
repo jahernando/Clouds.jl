@@ -4,7 +4,7 @@ import StatsBase     as SB
 import LinearAlgebra as LA
 import Graphs        as GG
 
-export clouds, nclouds
+export clouds
 
 #-----------------
 # Data Types
@@ -80,8 +80,6 @@ end
 # 	xspine  = spine()
 
 # 	return ntcells, edges
-
- end
 
 
 """

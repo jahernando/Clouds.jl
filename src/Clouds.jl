@@ -10,7 +10,7 @@ export discretize, discrete_gradient
 
 # import and export the relevant functions and strucs
 include("core.jl")
-export clouds, nclouds
+export clouds
 
 include("clustering.jl")
 export cluster_nodes, clustering
