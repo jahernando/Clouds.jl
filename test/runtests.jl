@@ -284,6 +284,40 @@ end
 		@test sum(sum(xnd.coors_std)) == 0.0
 	end
 
+	@testset "clustering" begin
+		nn   = sample(2:10)
+		b2   = box2d()
+		b2n  = repeat(b2.contents, nn)
+		coors, contents, steps = box_to_coors(b2n)
+		xcl, xnd, xspine, _    = clouds(coors, contents, steps)
+		cells, label           =  xcl.cells, xcl.node
+		xnodes         = cluster_nodes(cells, label)
+		@test sum(xnodes .== xcl.node) == length(xnodes)
+		xnodes, xlinks = clustering(cells, label)
+		@test sum(xnodes .== xcl.node) == length(xnodes)
+		yspine = spine(xlinks, xnd.contents)
+		@test GG.nv(xspine.spine) == GG.nv(yspine.spine)
+		n, _ = size(xspine.spine)
+		@test sum(xspine.dists        .== yspine.dists)        == n * n
+		@test sum(xspine.eccentricity .== yspine.eccentricity) == n
+		@test sum(xspine.extremes     .== yspine.extremes)     == length(xspine.extremes)
+		b3   = box2d()
+		b3n  = repeat(b3.contents, nn)
+		coors, contents, steps = box_to_coors(b3n)
+		xcl, xnd, xspine, _    = clouds(coors, contents, steps)
+		cells, label           = xcl.cells, xcl.node
+		xnodes         = cluster_nodes(cells, label)
+		@test sum(xnodes .== xcl.node) == length(xnodes)
+		xnodes, xlinks = clustering(cells, label)
+		@test sum(xnodes .== xcl.node) == length(xnodes)
+		yspine = spine(xlinks, xnd.contents)
+		@test GG.nv(xspine.spine) == GG.nv(yspine.spine)
+		n, _ = size(xspine.spine)
+		@test sum(xspine.dists         .== yspine.dists)        == n * n
+		@test sum(xspine.eccentricity  .== yspine.eccentricity) == n
+		@test sum(xspine.extremes      .== yspine.extremes)     == length(xspine.extremes)
+	end
+
 	@testset "spine" begin
 		nn   = sample(2:10)
 		b2   = box2d()

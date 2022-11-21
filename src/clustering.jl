@@ -131,6 +131,8 @@ function _get_links(nodes ::Vector{Int64},
 end
 
 """
+    cluster_nodes(cells, label)
+
 fron a vector *cells* (a vector of cartexian index in 2d or 3d) each one with a Int label, 
 given by the *label*, a vector of Int, return a list of the same dimension of the cells,
 with the association of each cell to a node.
@@ -154,6 +156,8 @@ function cluster_nodes(cells ::VTI,
 end    
 
 """
+    clustering(cells, label)
+    
 fron a vector *cells* (a vector of cartexian index in 2d or 3d) each one with a Int label, 
 given by the *label*, a vector of Int, return a list of the same dimension of the cells,
 with the association of each cell to a node, and a dictionary which keys are nodes and the valures
