@@ -4,7 +4,7 @@ import StatsBase     as SB
 import LinearAlgebra as LA
 import Graphs        as GG
 
-export moves, clouds
+export clouds, nclouds
 
 #-----------------
 # Data Types
@@ -24,16 +24,6 @@ VAN = Vector{T} where T <: Array{<:Number}
 AN  = T where T <: Array{<:Number}
 AI  = T where T <: Array{Int64}
 
-
-# Helper Data Type to hold one step movements in a 2D or 3D grid
-# one steps 1D movements are : [1, 0], [0, 1], [1, 1], [-1, 0], ...
-struct Moves
-	moves  ::Tuple{N{VI}}   # list with the vector of unitary movements in 2D or 3D
-	i0     ::Int64          # index of the null movement (0., 0) or (0, 0, 0)
-	isym   ::Tuple{N{T2I}}  # list of the pair of indices of symmetric movements i.e (1, 0), (-1, 0)
-	iortho ::Dict{T2I, VI}  # dictionary with the indices of the ortogonal movements
-	                        # i.e movements (0, 1) (0, -1) are orthogornal to (1, 0), (-1, 0)
-end
 
 # Data from cells (2d pixels or 3d voxels) of Clouds
 struct DataCells
@@ -71,60 +61,28 @@ struct DataNodes
 	extremes    ::VB             # true if the node is the pair extreme of the graph with the largest contents
 end
 
-#----------
-# Moves
-#----------
-
-"""
-	moves(ndim)
-
-Returns a `Moves` DataType for 2 or 3 dimentions.
-
-`Moves` holds data for the one step movements in one unit in any coordinate.
-
-# Examples
-
-```julia-repr
-julia> mm = Moves(2)
-julia> mm.moves
-([-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 0], [0, 1], [1, -1], [1, 0], [1, 1])
-```
-"""
-function moves(ndim::Int64)
-
-	if (ndim < 1) || (ndim > 3)
-		throw(ArgumentError("moves dimensions valid are 2, 3"))
-	end
-
-	# moves
-	moves = ndim == 2 ? Tuple([i, j] for i in -1:1:1 for j in -1:1:1) :
-	     Tuple([i, j, k] for i in -1:1:1 for j in -1:1:1 for k in -1:1:1)
-
-	# null move
-	move0 = ndim == 2 ? [0, 0] : [0, 0, 0]
-	kmove0 = [i for (i, move) in enumerate(moves) if (move == move0)][1]
-
-	# pair of indices of symmetric moves
-	smoves = Tuple((i, j) for (i, movei) in enumerate(moves)
-	          for (j, movej) in enumerate(moves)
-		      if (movei == -1 .* movej ) &  (i > j))
-
-	#list of orthogonal indeces of moves orthogonal to a pair os symmetric indices of moves
-	omoves = Dict{T2I, VI}()
-	for ii in smoves
-		movei = moves[ii[1]]
-		omoves[ii] = [j for (j, movej) in enumerate(moves)
-		    if ((sum(movej .* movei) == 0.0) & (sum(movej .* movej) != 0.0))]
-	end
-
-	#return (moves = moves, i0 = kmove0, isym = smoves, iortho = omoves)
-	return Moves(moves, kmove0, smoves, omoves)
-end
-
 
 #-----
 # Clouds
 #-----
+
+# function nclouds(coors     ::Tuple{N{VN}},  # Tuple with the point coordinates
+#  		  		contents  ::VN,            # content or weight of the point coordinates
+#  		        steps     ::TNN;           # Tuple with the step size in each coordinate
+#  			    threshold ::Float64 = 0.0)   # minimum content of a cell, threshold, default = 0.
+
+# 	ntcells, edges = discrete_gradient(coors, contents, steps; threshold = threshold)
+
+# 	_, links = clustering(ntcells.cells, ntcells.node)
+
+# 	ntnodes  = ana_nodes(ntcells)
+
+# 	xspine  = spine()
+
+# 	return ntcells, edges
+
+ end
+
 
 """
 	clouds(coors, energy, steps; cellmode = 1, threshold = 0.)

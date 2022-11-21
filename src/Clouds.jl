@@ -1,8 +1,16 @@
 module Clouds
 
+#import movements
+include("moves.jl")
+export moves, Moves
+
+#import discretize and gradient functions
+include("gradient.jl")
+export discretize, discrete_gradient
+
 # import and export the relevant functions and strucs
 include("core.jl")
-export moves, clouds
+export clouds, nclouds
 
 include("clustering.jl")
 export cluster_nodes, clustering
